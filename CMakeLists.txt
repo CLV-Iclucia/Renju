@@ -3,4 +3,4 @@ project(Komoku C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(Komoku main.c)
+add_executable(Komoku main.c GamePlay.h Gameplay.c utils.h utils.c)
