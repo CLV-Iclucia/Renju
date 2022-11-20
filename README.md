@@ -1,5 +1,17 @@
 # Renju
 
-# An ugly project for C programming course.
+## What is this & Some Thoughts 
 
-## Time spent on this project is limited, so the AI is not refined.
+这是C程序设计的五子棋大作业项目。
+
+### 这个小程序的定位:
+
+学Graphics的，对AI和算法的研究兴趣只能说很有限，所以花在AI上的时间有限，肯定卷不过大家的肝帝，大家不用慌。 
+
+Graphics人的关注重点是如何写好的UI而不是写一个能吊锤所有人的AI。
+
+毕竟Graphics是不一定用得上AI的，但是图形系统早晚是得造的（
+
+大家学AI的这么多，我何必抢你们饭碗呢（
+
+以及真真正正写一个**能work的要素齐全的游戏**。不过这一次就得强迫自己不能用C++，自己用C从底层开始把轮子造好，也不是什么难事儿，就是没泛型有点蛋疼，然后性能跟STL容器和算法都肯定没法比就是了。

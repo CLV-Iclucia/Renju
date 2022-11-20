@@ -1,13 +1,14 @@
 #include "utils.h"
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 // start from index p and read a non-negative integer from str
 int stringstream(const char* str, int* p)
 {
     int ret = 0;
     unsigned long n = strlen(str);
-    while(!is_digit(str[*p]))(*p)++;
-    while(is_digit(str[*p]) && (*p) < n)
+    while(!isdigit(str[*p]))(*p)++;
+    while(isdigit(str[*p]) && (*p) < n)
     {
         ret = (ret << 3) + (ret << 1) + ((str[*p]) ^ 48);
         (*p)++;
