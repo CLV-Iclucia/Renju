@@ -18,26 +18,26 @@ const char main_title[] = " ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄�
                           "▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌     ▐░▐░▌ ▄▄▄▄▄█░▌    ▐░█▄▄▄▄▄▄▄█░▌\n"
                           "▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌      ▐░░▌▐░░░░░░░▌    ▐░░░░░░░░░░░▌\n"
                           " ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀        ▀▀  ▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀ \n";
-struct TUIManager* initTitleScreen()
-{
-    struct TUIManager* titleScreenManager = constructTUIManager();
-    addTUIWidgetBack(titleScreenManager, main_title);
-    addTUIWidgetBack(titleScreenManager, "New Game");
-    addTUIWidgetBack(titleScreenManager, "Load Game");
-    addTUIWidgetBack(titleScreenManager, "Settings");
-    addTUIWidgetBack(titleScreenManager, "Quit");
-    return titleScreenManager;
-}
+//struct TUIManager* initTitleScreen()
+//{
+    //struct TUIManager* titleScreenManager = constructTUIManager();
+    //addTUIWidgetBack(titleScreenManager, main_title);
+    //addTUIWidgetBack(titleScreenManager, "New Game");
+    //addTUIWidgetBack(titleScreenManager, "Load Game");
+    //addTUIWidgetBack(titleScreenManager, "Settings");
+    //addTUIWidgetBack(titleScreenManager, "Quit");
+    //return titleScreenManager;
+//}
 int main()
 {
-    FILE* fp;
-    struct TUIManager* titleScreenManager = initTitleScreen();
+    //FILE* fp;
+    //struct TUIManager* titleScreenManager = initTitleScreen();
     //while(1)
     //{
-        render(titleScreenManager);
+        //render(titleScreenManager);
         //gameLoop();
-        getchar();
-        deconstructTUIManager(titleScreenManager);
+        //getchar();
+    //destructTUIManager(titleScreenManager);
     //}
     return 0;
 }

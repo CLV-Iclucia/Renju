@@ -5,6 +5,7 @@
 #ifndef RENJU_GAMECORE_H
 #define RENJU_GAMECORE_H
 
+#include <stdbool.h>
 #define EMPTY 0
 #define WHITE 2
 #define BLACK 3
@@ -14,5 +15,4 @@
 #define ALIGNMENT 16//better alignment for the compiler to optimize
 #define TRUE 1
 #define FALSE 0
-typedef char BOOL;
 #endif //RENJU_GAMECORE_H

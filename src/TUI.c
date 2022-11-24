@@ -5,7 +5,7 @@
 #include <string.h>
 #include "GameCore.h"
 #include "TUI.h"
-struct TUIWidget* constructTUIWidget(struct Vec2i pos, int width, int height, BOOL show_bounding_box, const char* name, const char* content)
+struct TUIWidget* constructTUIWidget(struct Vec2i pos, int width, int height, bool show_bounding_box, const char* name, const char* content)
 {
     struct TUIWidget* tuiWidget = (struct TUIWidget*)malloc(sizeof(struct TUIWidget));
     tuiWidget->pos = pos;
@@ -36,9 +36,8 @@ struct TUIManager* constructTUIManager()
     return tuiManager;
 }
 
-void addTUIWidget(struct TUIManager* tuiManager, struct Vec2i pos, int width, int height, BOOL show_bounding_box, const char* name, const char* content)
+void addTUIWidgetInstance(struct TUIManager* tuiManager, struct TUIWidget* tuiWidget)
 {
-    struct TUIWidget* tuiWidget = constructTUIWidget(pos, width, height, show_bounding_box, name, content);
     if(tuiManager->head == NULL) tuiManager->head = tuiManager->tail = tuiWidget;
     else
     {
@@ -47,7 +46,16 @@ void addTUIWidget(struct TUIManager* tuiManager, struct Vec2i pos, int width, in
     }
 }
 
-void deconstructTUIManager(struct TUIManager* tuiManager)
+/**
+ * almost the same as addTUIWidget.
+ */
+void addTUIWidget(struct TUIManager* tuiManager, struct Vec2i pos, int width, int height, bool show_bounding_box, const char* name, const char* content)
+{
+    struct TUIWidget* tuiWidget = constructTUIWidget(pos, width, height, show_bounding_box, name, content);
+    addTUIWidgetInstance(tuiManager, tuiWidget);
+}
+
+void destructTUIManager(struct TUIManager* tuiManager)
 {
     struct TUIWidget* tuiWidget = tuiManager->head;
     while(tuiWidget != NULL)
@@ -58,14 +66,22 @@ void deconstructTUIManager(struct TUIManager* tuiManager)
     }
     free(tuiManager);
 }
-
+/**
+ * get the character at coordinates (x, y)
+ * @param tuiWidget
+ * @param x
+ * @param y
+ * @return
+ *      if the position (x, y) is outside the bounding box of tuiWidget, returns -1
+ *      else returns the character to be displayed
+ */
 static char get_char_inside_window(struct TUIWidget* tuiWidget, int x, int y)
 {
     int right_bound = tuiWidget->pos.x + tuiWidget->width + 1;
     int bottom_bound = tuiWidget->pos.y + tuiWidget->height + 1;
     if(x < tuiWidget->pos.x || x > bottom_bound || y < tuiWidget->pos.y || y > right_bound) return 0;
-    BOOL at_corner_x = (x == tuiWidget->pos.x) || (x == bottom_bound);
-    BOOL at_corner_y = (y == tuiWidget->pos.y) || (y == right_bound);
+    bool at_corner_x = (x == tuiWidget->pos.x) || (x == bottom_bound);
+    bool at_corner_y = (y == tuiWidget->pos.y) || (y == right_bound);
     if (tuiWidget->show_bounding_box)
     {
         if(at_corner_x && at_corner_y) return '+';

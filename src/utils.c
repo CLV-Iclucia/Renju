@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 // start from index p and read a non-negative integer from str
 int stringstream(const char* str, int* p)
 {
@@ -32,4 +33,15 @@ int getLine(char* str, int n)
     while((ch = getchar()) != '\n' && ch != '\r' && ch != EOF);
     str[n] = 0;
     return tot_input + 1;
+}
+
+void clear_output()
+{
+#ifdef IS_LINUX
+    system("clear");
+#elif IS_DARWIN
+    system("clear");
+#elif IS_WINDOWS
+    system("cls");
+#endif
 }
