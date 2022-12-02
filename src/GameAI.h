@@ -5,6 +5,5 @@
 #ifndef RENJU_GAMEAI_H
 #define RENJU_GAMEAI_H
 #include "GameCore.h"
-void AIPlace(const int* , int);
-int checkWinner(const int*);
+void AIPlace(struct State* state, int currentColor);
 #endif //RENJU_GAMEAI_H

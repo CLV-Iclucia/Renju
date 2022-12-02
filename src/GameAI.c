@@ -3,7 +3,7 @@
 //
 #include "GameAI.h"
 
-int checkWinner(const int* board)
+int checkWinner(const int* state)
 {
     return 0;
 }
