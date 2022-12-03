@@ -21,7 +21,7 @@ static inline int checkGrids(int bit_mask, int pos, int len)
     return ((1 << (len << 1)) - 1) & (bit_mask >> (pos << 1));
 }
 void clear_output();
-void getchar_enter();
+char getchar_crossplatform();
 struct Vec2i
 {
     int x, y;

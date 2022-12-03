@@ -46,10 +46,17 @@ void clear_output()
 #endif
 }
 
-void getchar_enter()
+char getchar_crossplatform()
 {
-    getchar();
+    char c = getchar();
 #ifdef IS_WINDOWS
-    getchar();
+    if(c == '\r')
+    {
+        c = getchar();
+        return c;
+    }
+    else return c;
+#else
+    return c == '\n';
 #endif
 }

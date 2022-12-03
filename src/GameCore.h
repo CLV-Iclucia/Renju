@@ -12,6 +12,8 @@
 #define BLACK 3
 #define SIZE 15
 #define RENJU_LENGTH 5
+#define WHITE_RENJU_MASK 682//the bitmask of five white stones in a row is 1010101010
+#define BLACK_RENJU_MASK 1023//the bitmask of five white stones in a row is 1111111111
 #define ALIGNMENT 16//better alignment for the compiler to optimize
 /**
  * Use four/six int arrays to store current state of the state.
@@ -112,8 +114,7 @@ static inline bool matchPattern(struct State* const state, int len, int pattern)
     return false;
 }
 /**
- * search a particular pattern around a given point in 4 directions.
- * Because if more than one pattern is matched around the place, it can be replaced with a different pattern.
+ * search a particular black pattern around a given point in 4 directions.
  * @param state the pointer to the state to be checked
  * @param x the row number of the given point
  * @param y the column number of the given point
@@ -121,7 +122,7 @@ static inline bool matchPattern(struct State* const state, int len, int pattern)
  * @param pattern the pattern
  * @return a bool. Returns true if and only if the pattern is found around the state.
  */
-static inline bool searchPatternAroundPoint(struct State* const state, int x, int y, int len, int pattern)
+static inline bool searchPatternAroundPointGreedy(struct State* const state, int x, int y, int len, int pattern)
 {
     for(int j = 0; j <= SIZE - len; j++)
         if(checkGrids(state->row[x], j, len) == pattern)
@@ -131,26 +132,73 @@ static inline bool searchPatternAroundPoint(struct State* const state, int x, in
             return true;
     if(y > x)
     {
-        for(int j = 0; j <= SIZE - len - x; j++)
+        for(int j = 0; j <= SIZE - len - y + x; j++)
             if(checkGrids(state->diagLU[y - x], j, len) == pattern)
                 return true;
     }
     else
     {
-        for(int j = 0; j <= SIZE - len - x; j++)
+        for(int j = 0; j <= SIZE - len - x + y; j++)
             if(checkGrids(state->diagLD[x - y], j, len) == pattern)
                 return true;
     }
     if(x + y <= SIZE - 1)
     {
-        for(int j = 0; j <= x + 1 - len; j++)
+        for(int j = 0; j <= x + y + 1 - len; j++)
             if(checkGrids(state->diagRU[x + y], j, len) == pattern)
                 return true;
     }
     else
     {
-        for(int j = 0; j <= SIZE - len - x; j++)
+        for(int j = 0; j <= (SIZE << 1) - 1 - len - x - y; j++)
             if(checkGrids(state->diagRD[x + y - SIZE + 1], j, len) == pattern)
+                return true;
+    }
+    return false;
+}
+
+static inline bool searchPatternAroundPoint(struct State* const state, int x, int y, int len, int pattern)
+{
+    for(int j = 0; j <= SIZE - len; j++)
+        if(checkGrids(state->row[x], j, len) == pattern
+            && (!j || checkGrids(state->row[x], j - 1, 1) != BLACK)
+            && (j == SIZE - len || checkGrids(state->row[x], j + len, 1) != BLACK))
+            return true;
+    for(int j = 0; j <= SIZE - len; j++)
+        if(checkGrids(state->col[y], j, len) == pattern
+            && (!j || checkGrids(state->col[y], j - 1, 1) != BLACK)
+            && (j == SIZE - len || checkGrids(state->col[y], j + len, 1) != BLACK))
+            return true;
+    if(y > x)
+    {
+        for(int j = 0; j <= SIZE - len - y + x; j++)
+            if(checkGrids(state->diagLU[y - x], j, len) == pattern
+                && (!j || checkGrids(state->diagLU[y - x], j - 1, 1) != BLACK)
+                && (j == SIZE - len || checkGrids(state->diagLU[y - x], j + len, 1) != BLACK))
+                return true;
+    }
+    else
+    {
+        for(int j = 0; j <= SIZE - len - x + y; j++)
+            if(checkGrids(state->diagLD[x - y], j, len) == pattern
+                && (!j || checkGrids(state->diagLD[x - y], j - 1, 1) != BLACK)
+                && (j == SIZE - len || checkGrids(state->diagLD[x - y], j + len, 1) != BLACK))
+                return true;
+    }
+    if(x + y <= SIZE - 1)
+    {
+        for(int j = 0; j <= x + y + 1 - len; j++)
+            if(checkGrids(state->diagRU[x + y], j, len) == pattern
+                && (!j || checkGrids(state->diagRU[x + y], j - 1, 1) != BLACK)
+                && (j == SIZE - len || checkGrids(state->diagRU[x + y], j + len, 1) != BLACK))
+                return true;
+    }
+    else
+    {
+        for(int j = 0; j <= (SIZE << 1) - 1 - len - x - y; j++)
+            if(checkGrids(state->diagRD[x + y - SIZE + 1], j, len) == pattern
+                && (!j || checkGrids(state->diagRD[x + y - SIZE + 1], j - 1, 1) != BLACK)
+                && (j == SIZE - len || checkGrids(state->diagRD[x + y - SIZE + 1], j + len, 1) != BLACK))
                 return true;
     }
     return false;

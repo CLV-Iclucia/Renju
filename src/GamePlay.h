@@ -11,15 +11,6 @@
 #define ENDING_DRAW 3
 #define ENDING_NOT_END 4
 
-//#define PLACE(i, j, COLOR) row[(i)]|=(COLOR<<((j)<<1));\
-//                           col[(j)]|=(COLOR<<((i)<<1));\
-//                           diagL[(i)+(j)]=(COLOR<<((i)<<1));\
-//                           diagR[(i)-(j)+SIZE]=(COLOR<<((i)<<1))//place a chess of COLOR at (i, j), make sure that (i, j) is valid
-//#define CLEAR(i, j) row[(i)]&=CLR[(j)];\
-//                    col[(j)]&=CLR[(i)];\
-//                    diagL[(i)+(j)]&=CLR[(i)];\
-//                    diagR[(i)-(j)+SIZE]&=CLR[(i)]//place a chess of COLOR at (i, j), make sure that (i, j) is valid
-
 void drawBoard(const struct State* state);
 void gameLoop(int gameMode, int AIColor);
 bool checkForbid(struct State* state, int x, int y);

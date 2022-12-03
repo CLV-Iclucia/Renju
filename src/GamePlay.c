@@ -9,9 +9,6 @@
 #define INVALID_INPUT_CANNOT_PARSE 2
 #define INVALID_INPUT_OUT_OF_RANGE 3
 #define INVALID_INPUT_OVERLAP 4
-static const int WHITE_RENJU_MASK = 682;//the bitmask of five white stones in a row is 1010101010
-static const int BLACK_RENJU_MASK = 1023;//the bitmask of five white stones in a row is 1111111111
-
 static int lastPosX, lastPosY;
 
 /**
@@ -19,7 +16,7 @@ static int lastPosX, lastPosY;
  */
 void drawBoard(const struct State* state)
 {
-    for(int i = 0; i < SIZE; i++)
+    for(int i = SIZE - 1; i >= 0; i--)
     {
         printf("%2d", i + 1);
         for(int j = 0; j < SIZE; j++)
@@ -36,9 +33,9 @@ void drawBoard(const struct State* state)
                 {
                     if(!i)
                     {
-                        if(!j) printf("┌");
-                        else if(j < SIZE - 1)printf("┬");
-                        else printf("┐");
+                        if(!j)printf("└");
+                        else if(j < SIZE - 1)printf("┴");
+                        else printf("┘");
                     }
                     else if(i < SIZE - 1)
                     {
@@ -48,9 +45,9 @@ void drawBoard(const struct State* state)
                     }
                     else
                     {
-                        if(!j)printf("└");
-                        else if(j < SIZE - 1)printf("┴");
-                        else printf("┘");
+                        if(!j) printf("┌");
+                        else if(j < SIZE - 1)printf("┬");
+                        else printf("┐");
                     }
                 }
                 else if(status == BLACK)printf("●");
@@ -190,12 +187,14 @@ void gameLoop(const int gameMode, const int AIColor)
     }
     else if(ending == ENDING_WHITE_WIN_RENJU)
     {
-        printf("A black Renju is formed! White wins!\n");
+        printf("A white Renju is formed! White wins!\n");
     }
     else if(ending == ENDING_WHITE_WIN_FORBID)
     {
         printf("A forbidden move is made! White wins!\n");
     }
+    printf("Press any key to return to the title screen\n");
+    getchar();
 }
 
 /**
