@@ -45,3 +45,11 @@ void clear_output()
     system("cls");
 #endif
 }
+
+void getchar_enter()
+{
+    getchar();
+#ifdef IS_WINDOWS
+    getchar();
+#endif
+}

@@ -9,8 +9,9 @@
 #define INVALID_INPUT_CANNOT_PARSE 2
 #define INVALID_INPUT_OUT_OF_RANGE 3
 #define INVALID_INPUT_OVERLAP 4
+static const int WHITE_RENJU_MASK = 682;//the bitmask of five white stones in a row is 1010101010
+static const int BLACK_RENJU_MASK = 1023;//the bitmask of five white stones in a row is 1111111111
 
-static const int WHITE_RENJU_MASK = 682;///the bitmask of five white stones in a row
 static int lastPosX, lastPosY;
 
 /**
@@ -70,7 +71,7 @@ void drawBoard(const struct State* state)
  *      if the input is valid, then returns NOTHING_WRONG,
  *      else returns the corresponding error code.
  */
-static ERROR_CODE parseCoord(const struct State* state, char* coord, int* posX, int* posY)
+static int parseCoord(const struct State* state, char* coord, int* posX, int* posY)
 {
     unsigned long n = strlen(coord);
     int Y_parsed = 0, X_parsed = 0, Y_first = 0;
@@ -110,12 +111,12 @@ static ERROR_CODE parseCoord(const struct State* state, char* coord, int* posX, 
  * process the input of coordinates and parse the input
  * @return a Vec2i instance with first element as the x-coordinate and the second element as the y-coordinate
  */
-static struct Vec2i inputCoord(const struct State* state, int currentColor)
+static struct Vec2i inputCoord(const struct State* state)
 {
     char coord[4];
     getLine(coord, 3);
     int posX, posY;
-    ERROR_CODE errorCode = parseCoord(state, coord, &posX, &posY);
+    int errorCode = parseCoord(state, coord, &posX, &posY);
     while(errorCode != NOTHING_WRONG)
     {
         if(errorCode == INVALID_INPUT_CANNOT_PARSE)
@@ -153,7 +154,7 @@ static void printPrompt(int currentColor)
 
 void playerPlace(struct State* const state, const int currentColor)
 {
-    struct Vec2i pos = inputCoord(state, currentColor);
+    struct Vec2i pos = inputCoord(state);
     PLACE(state, pos.x, pos.y, currentColor);
 }
 
@@ -169,7 +170,7 @@ void gameLoop(const int gameMode, const int AIColor)
     struct State* state = constructState();
     lastPosX = -1, lastPosY = -1;
     int currentColor = BLACK;
-    int winner = -1;
+    int ending = ENDING_NOT_END;
     while(1)
     {
         clear_output();
@@ -180,20 +181,22 @@ void gameLoop(const int gameMode, const int AIColor)
             playerPlace(state, currentColor);
         }
         else AIPlace(state, AIColor);
-        if((winner = checkWinner(state, currentColor)) > 0) break;
+        if((ending = checkWinner(state, currentColor)) != ENDING_NOT_END) break;
         currentColor ^= 1;
     }
-    if(winner == BLACK)
+    if(ending == ENDING_BLACK_WIN)
     {
-        printf("Black wins!");
+        printf("A black Renju is formed! Black wins!\n");
     }
-    else
+    else if(ending == ENDING_WHITE_WIN_RENJU)
     {
-        printf("White wins!");
+        printf("A black Renju is formed! White wins!\n");
+    }
+    else if(ending == ENDING_WHITE_WIN_FORBID)
+    {
+        printf("A forbidden move is made! White wins!\n");
     }
 }
-
-
 
 /**
  * Judge the winner of the game based on current state and current color
@@ -203,16 +206,19 @@ void gameLoop(const int gameMode, const int AIColor)
  * The only exception occurs when the black player make a forbidden move.
  * @return the ending code of current state
  */
-ENDING_CODE checkWinner(struct State* const state, int currentColor)
+int checkWinner(struct State* const state, int currentColor)
 {
     if(currentColor == WHITE)//In this case, the black player cannot win
     {
-        if(matchPattern(state, RENJU_LENGTH, WHITE_RENJU_MASK))
-            return ENDING_WHITE_WIN;
+        if(matchPattern(state, RENJU_LENGTH, WHITE_RENJU_MASK))//actually I can use countPatternAroundPoint here...
+            return ENDING_WHITE_WIN_RENJU;
     }
-    else//The only case that white player win is that the black player made a forbidden move.
+    else//The only case that white player wins is that the black player made a forbidden move.
     {
-        return ENDING_NOT_END;
+        if(checkForbid(state, lastPosX, lastPosY))
+            return ENDING_WHITE_WIN_FORBID;
+        else if(matchPattern(state, RENJU_LENGTH, BLACK_RENJU_MASK))
+            return ENDING_BLACK_WIN;
     }
     return ENDING_NOT_END;
 }

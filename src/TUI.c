@@ -5,7 +5,8 @@
 #include <string.h>
 #include "GameCore.h"
 #include "TUI.h"
-static const int MAX_BUFLINES = 128, MAX_BUFCOLUMNS = 512;
+#define MAX_BUFLINES 128
+#define MAX_BUFCOLUMNS 512
 struct TUIWidget* constructTUIWidget(struct Vec2i pos, int width, int height, bool show_bounding_box, const char* name, const char* content)
 {
     if(pos.x + height >= MAX_BUFLINES || pos.y + width >= MAX_BUFCOLUMNS)
@@ -140,3 +141,5 @@ void render(struct TUIManager* tuiManager)
     for(int i = 0; i < tuiManager->width; i++)
         printf("%s\n", frame_buf[i]);
 }
+#undef MAX_BUFCOLUMNS
+#undef MAX_BUFLINES

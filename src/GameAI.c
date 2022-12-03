@@ -2,8 +2,7 @@
 // Created by creeper on 22-11-18.
 //
 #include "GameAI.h"
-
-int checkWinner(const int* state)
+void AIPlace(struct State* state, int currentColor)
 {
-    return 0;
+    return ;
 }
