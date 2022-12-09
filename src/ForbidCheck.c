@@ -11,7 +11,14 @@
 #define BBEBB 975
 #define BEBBB 1011
 #define BBBEB 831
+#define DIR_NUM 4
+#define ROW 0
+#define COL 1
+#define DIAGL 2
+#define DIAGR 3
 static const int BLACK_DOUBLE_FOUR_SAME_LINE[3] = {13299, 62415, 258879};
+static const int dx[] = {0, 1, 1, -1};
+static const int dy[] = {1, 0, 1, 1};
 //11001111110011, 1111001111001111, 111111001100111111
 /**
  *  whether it is OK to place a black stone at (x, y), considering forbidden moves

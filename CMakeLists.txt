@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.23)
-project(Renju CUDA C)
-
+#project(Renju CUDA C)
+project(Renju C)
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_CUDA_STANDARD 14)
+#set(CMAKE_CUDA_STANDARD 14)
 
 file(GLOB RENJU_SRC src/*)
 

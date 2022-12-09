@@ -3,6 +3,7 @@
 //
 #include <malloc.h>
 #include <string.h>
+#include <stdio.h>
 #include "GameCore.h"
 #include "TUI.h"
 #define MAX_BUFLINES 128
