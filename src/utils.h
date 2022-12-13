@@ -22,6 +22,7 @@ static inline int checkGrids(int bit_mask, int pos, int len)
 }
 void clear_output();
 char getchar_crossplatform();
+char getchar_no_buf();
 struct Vec2i
 {
     int x, y;

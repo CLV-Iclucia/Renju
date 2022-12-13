@@ -135,7 +135,12 @@ void render(struct TUIManager* tuiManager)
         {
             for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
             {
-                //frame_buf[i][j] = ;
+                char ch = get_char_inside_window(tuiWidget, i, j);
+                if(ch)
+                {
+                    frame_buf[i][j] = ch;
+                    break;
+                }
             }
         }
     }

@@ -3,6 +3,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#ifdef IS_WINDOWS
+#include <conio.h>
+#else
+#include <termio.h>
+#endif
 // start from index p and read a non-negative integer from str
 int stringstream(const char* str, int* p)
 {
@@ -58,5 +63,25 @@ char getchar_crossplatform()
     else return c;
 #else
     return c == '\n';
+#endif
+}
+
+char getchar_no_buf()
+{
+#ifdef IS_WINDOWS
+    return getch();
+#else
+    struct termios tm, tm_orig;
+    int fd = 0;
+    if(tcgetattr(fd, &tm) < 0)
+        return -1;
+    tm_orig = tm;
+    cfmakeraw(&tm);
+    if(tcsetattr(fd, TCSANOW, &tm) < 0)
+        return -1;
+    char c = getchar();
+    if(tcsetattr(fd, TCSANOW, &tm_orig) < 0)
+        return -1;
+    return c;
 #endif
 }
