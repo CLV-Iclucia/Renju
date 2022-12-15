@@ -36,7 +36,7 @@ void deconstructTUIWidget(struct TUIWidget*);
 struct TUIManager
 {
     int width, height;
-    struct TUIWidget *head;/// the widget closer to the head will be drawn on the top in case of overlapping
+    struct TUIWidget *head;// the widget closer to the head will be drawn on the top in case of overlapping
     struct TUIWidget *tail;
 };
 /**
@@ -51,11 +51,12 @@ void destructTUIManager(struct TUIManager*);
 
 void addTUIWidgetInstance(struct TUIManager *tuiManager, struct TUIWidget* tuiWidget);
 void addTUIWidget(struct TUIManager *tuiManager, struct Vec2i pos, int width, int height, bool show_bounding_box, const char *name, const char *content);
+void setBounding(struct TUIManager *tuiManager, char *name, bool show_bounding_box);
 
 /**
  * render the UI with the information of a TUIManager instance
  * @param tuiManager the TUIManager instance to be used
  */
 void render(struct TUIManager* tuiManager);
-
+void sequenceRender(struct TUIManager* tuiManager);
 #endif //RENJU_TUI_H

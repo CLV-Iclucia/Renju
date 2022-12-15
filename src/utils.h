@@ -1,6 +1,10 @@
 #ifndef RENJU_UTILS_H
 #define RENJU_UTILS_H
 #include <stdbool.h>
+#define UP (-1)
+#define DOWN 1
+#define CONFIRM 0
+#define UNKNOWN 2
 int stringstream(const char*, int*);
 int getLine(char*, int);
 static inline int min(int a, int b)
@@ -23,6 +27,7 @@ static inline int checkGrids(int bit_mask, int pos, int len)
 void clear_output();
 char getchar_crossplatform();
 char getchar_no_buf();
+int getControlInput();
 struct Vec2i
 {
     int x, y;

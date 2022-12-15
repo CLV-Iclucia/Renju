@@ -85,3 +85,23 @@ char getchar_no_buf()
     return c;
 #endif
 }
+
+int getControlInput()
+{
+    char opt = getchar_no_buf();
+#ifdef IS_WINDOWS
+
+#else
+    if(opt == 27)
+    {
+        opt = getchar_no_buf();
+        if(opt == 91)
+        {
+            opt = getchar_no_buf();
+            if(opt == 65 || opt == 68) return UP;
+            else if(opt == 66 || opt == 67) return DOWN;
+            else return UNKNOWN;
+        }
+    }
+#endif
+}

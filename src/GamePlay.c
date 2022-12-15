@@ -9,8 +9,10 @@
 #define INVALID_INPUT_CANNOT_PARSE 2
 #define INVALID_INPUT_OUT_OF_RANGE 3
 #define INVALID_INPUT_OVERLAP 4
+#define MAX_LOG 256
 static int lastPosX, lastPosY;
-
+static struct Vec2i log[MAX_LOG];
+static int log_ptr;
 /**
  * draw the state based on current state and the last move.
  */
@@ -149,6 +151,44 @@ static void printPrompt(int currentColor)
     printf("input: ");
 }
 
+static void pause()
+{
+
+}
+
+static void rollback(struct State* const state)
+{
+    CLEAR(state, log[log_ptr].x, log[log_ptr].y);
+    log_ptr--;
+    if(log_ptr)
+    {
+        CLEAR(state, log[log_ptr].x, log[log_ptr].y);
+        log_ptr++;
+    }
+}
+
+/**
+ * process options
+ * @param opt the input option
+ * @return
+ *      returns true if opt indeed triggers an option,
+ *      else returns false.
+ */
+static bool processOpt(struct State* const state, char opt)
+{
+    if(opt == 'P' || opt == 'p')
+    {
+        pause();
+        return true;
+    }
+    else if(opt == 'R' || opt == 'r')
+    {
+        rollback(state);
+        return true;
+    }
+    else return false;
+}
+
 void playerPlace(struct State* const state, const int currentColor)
 {
     struct Vec2i pos = inputCoord(state);
@@ -175,6 +215,9 @@ void gameLoop(const int gameMode, const int AIColor)
         if((gameMode == GAME_MODE_PVE && currentColor == AIColor) || gameMode == GAME_MODE_PVP)
         {
             printPrompt(currentColor);
+            char ch = getchar_no_buf();
+            if(!processOpt(state, ch))
+                ungetc(ch, stdin);
             playerPlace(state, currentColor);
         }
         else AIPlace(state, AIColor);

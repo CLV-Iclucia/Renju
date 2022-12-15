@@ -124,6 +124,18 @@ static char get_char_inside_window(struct TUIWidget* tuiWidget, int x, int y)
     return tuiWidget->content[offset];
 }
 
+void setBounding(struct TUIManager* tuiManager, char *name, bool show_bounding_box)
+{
+    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
+    {
+        if(strcmp(tuiWidget->name, name) == 0)
+        {
+            tuiWidget->show_bounding_box = show_bounding_box;
+            break;
+        }
+    }
+}
+
 void render(struct TUIManager* tuiManager)
 {
     static char frame_buf[MAX_BUFLINES][MAX_BUFCOLUMNS];
@@ -147,5 +159,14 @@ void render(struct TUIManager* tuiManager)
     for(int i = 0; i < tuiManager->width; i++)
         printf("%s\n", frame_buf[i]);
 }
+
+void sequenceRender(struct TUIManager *tuiManager)
+{
+    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
+    {
+
+    }
+}
+
 #undef MAX_BUFCOLUMNS
 #undef MAX_BUFLINES
