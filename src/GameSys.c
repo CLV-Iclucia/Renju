@@ -27,17 +27,17 @@ void read_meta()
  * @param save_name the name of this save.
  * @return returns true if saving succeeds.
  */
-bool save(struct State* state, struct Log* log_head, char *save_name)
-{
-#define DIR_LENGTH 16
-    static char save_path[DIR_LENGTH + MAX_SAVE_NAME_LENGTH] = "../assets/saves/";//that should be enough for a path
-    strcat(save_path, save_name);
-    FILE* fp = fopen(save_path, "w+");
-    if(fp == NULL)
-    {
-        printf("Error: Fail to write to save file.\n");
-        return 0;
-    }
-
-#undef DIR_LENGTH
-}
+//bool save(struct State* state, struct Log* log_head, char *save_name)
+//{
+//#define DIR_LENGTH 16
+//    static char save_path[DIR_LENGTH + MAX_SAVE_NAME_LENGTH] = "../assets/saves/";//that should be enough for a path
+//    strcat(save_path, save_name);
+//    FILE* fp = fopen(save_path, "w+");
+//    if(fp == NULL)
+//    {
+//        printf("Error: Fail to write to save file.\n");
+//        return 0;
+//    }
+//
+//#undef DIR_LENGTH
+//}

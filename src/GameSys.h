@@ -3,5 +3,5 @@
 #include "GameCore.h"
 #define MAX_SAVE_NAME_LENGTH 128
 void read_meta();
-bool save(struct State* state, struct Log* log_head, char *save_name);
+//bool save(struct State* state, struct Log* log_head, char *save_name);
 #endif

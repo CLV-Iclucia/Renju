@@ -1,3 +1,6 @@
+/**
+ * The initializing processes are in this file.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +29,9 @@ static int save_cnt = 0;
 static char theme[ENTRY_MAX_LENGTH];
 static char *option[OPTION_CNT] = {"New Game", "Load Game", "Settings", "About", "Quit"};
 static int opt_idx = 0;
-static struct TUIManager* titleScreenManager;
+static struct TUIManager *titleScreenManager, *loadScreenManager, *settingScreenManager, *aboutScreenManager;
+static char* buf[MAX_IMAGE_SIZE];
+static struct Cursor* cursor;
 struct Entry
 {
     char name[ENTRY_MAX_LENGTH];
@@ -50,21 +55,59 @@ struct Entry* constructEntry(const char *meta_entry)
     entry->n_value = n - m;
     return entry;
 }
+
+struct TUIWidget* initThemeImage(FILE* fp, const char *name)
+{
+    int height = read_num(fp);
+    int width = read_num(fp);
+    for(int i = 0; i < width; i++)
+    {
+        if(buf[i] == NULL) buf[i] = (char*) malloc(MAX_IMAGE_SIZE * 3 + 1);
+        fgetLine(fp, buf[i], height * 3);
+    }
+    return constructImage(width, height, name, buf);
+}
+
+struct Cursor* initThemeCursor(FILE* fp)
+{
+    struct Cursor* new_cursor = (struct Cursor*) malloc(sizeof(struct Cursor));
+    new_cursor->len_left = read_num(fp);
+    fgetLine(fp, new_cursor->cursor_l, new_cursor->len_left);
+    new_cursor->len_right = read_num(fp);
+    fgetLine(fp, new_cursor->cursor_r, new_cursor->len_right);
+    return new_cursor;
+}
+
+void initTheme(const char* path)
+{
+    FILE* fp = fopen(path, "r");
+    if(fp == NULL)
+    {
+        printf("Error: Fail to read theme assets.");
+        exit(-1);
+    }
+    struct TUIWidget* main_title_widget = initThemeImage(fp, "Main Title");
+    struct TUIWidget* setting_widget = initThemeImage(fp, "Settings");
+    struct TUIWidget* load_widget = initThemeImage(fp, "Load");
+    struct TUIWidget* about_widget = initThemeImage(fp, "About");
+    cursor = initThemeCursor(fp);
+    addTUIWidgetBack(titleScreenManager, main_title_widget);
+    addTUIWidgetBack(settingScreenManager, setting_widget);
+    addTUIWidgetBack(loadScreenManager, load_widget);
+    addTUIWidgetBack(aboutScreenManager, about_widget);
+    fclose(fp);
+}
+
 struct TUIManager* initTitleScreen()
 {
     static char path[ENTRY_MAX_LENGTH << 1];
     memset(path, 0, sizeof(path));
     strcpy(path, "../assets/themes/");
     strcat(path, theme);
-    FILE* fp = fopen(path, "r");
-    if(fp == NULL)
-    {
-        printf("Error: Fail to read theme assets");
-        exit(-1);
-    }
-    fscanf(fp, "%d %d", &)
-    titleScreenManager = constructTUIManager();
-
+    initTheme(path);
+    for(int i = 0; i < OPTION_CNT; i++)
+        addTUIWidgetBack(titleScreenManager, constructText(option[i], option[i]));
+    setChosen(titleScreenManager, option[opt_idx], true);
     return titleScreenManager;
 }
 void newGame()
@@ -88,17 +131,22 @@ void initGame()
         exit(-1);
     }
     char meta_entry[ENTRY_MAX_LENGTH];
-    while(fscanf(fp, "%s", meta_entry))
+    while(fscanf(fp, "%s", meta_entry) == 1)
     {
         struct Entry* entry = constructEntry(meta_entry);
         if(strcmp(entry->name, "theme") == 0)
-            memcpy(theme, entry->value, sizeof(char) * entry->n_value);
+            memcpy(theme, entry->value, entry->n_value);
         else if(strcmp(entry->name, "savings") == 0)
         {
             int i = 0;
             save_cnt = stringstream(entry->value, &i);
         }
+        free(entry);
     }
+    titleScreenManager = constructTUIManager();
+    loadScreenManager = constructTUIManager();
+    settingScreenManager = constructTUIManager();
+    aboutScreenManager = constructTUIManager();
     fclose(fp);
 }
 #endif
@@ -114,11 +162,11 @@ bool processControl()
     if(opt == UNKNOWN) return true;
     else if(opt != CONFIRM)
     {
-        setBounding(titleScreenManager, option[opt_idx], false);
+        setChosen(titleScreenManager, option[opt_idx], false);
         opt_idx += opt;
         if(opt_idx < 0) opt_idx = OPTION_CNT - 1;
         if(opt_idx == OPTION_CNT) opt_idx = 0;
-        setBounding(titleScreenManager, option[opt_idx], true);
+        setChosen(titleScreenManager, option[opt_idx], true);
         return true;
     }
     if(strcmp(option[opt_idx], "New Game") == 0) newGame();
@@ -142,10 +190,16 @@ int main()
         char opt = getchar();
         if(opt == '\n') gameLoop(GAME_MODE_PVP, -1);
 #else
-        render(titleScreenManager);
+        render(titleScreenManager, cursor);
         if(!processControl()) break;
 #endif
     }
+    destructTUIManager(titleScreenManager);
+    destructTUIManager(loadScreenManager);
+    destructTUIManager(settingScreenManager);
+    destructTUIManager(aboutScreenManager);
+    for(int i = 0; i < MAX_IMAGE_SIZE; i++)
+        free(buf[i]);
     clear_output();
     return 0;
 }

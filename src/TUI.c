@@ -4,42 +4,66 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 #include "GameCore.h"
 #include "TUI.h"
-#define MAX_BUFLINES 128
-#define MAX_BUFCOLUMNS 512
-struct TUIWidget* constructTUIWidget(struct Vec2i pos, int width, int height, bool show_bounding_box, const char* name, const char* content)
+#define MAX_BUFCOLUMNS 96
+struct TUIWidget* constructText(const char* name, const char* content)
 {
-    if(pos.x + height >= MAX_BUFLINES || pos.y + width >= MAX_BUFCOLUMNS)
-    {
-        printf("Error: the size of TUIWidget cannot exceed 512");
-        return NULL;
-    }
     struct TUIWidget* tuiWidget;
     if(!(tuiWidget = (struct TUIWidget*)malloc(sizeof(struct TUIWidget))))
     {
         printf("Error: cannot construct new TUIWidget instance due to malloc failure.\n");
         return NULL;
     }
-    tuiWidget->pos = pos;
-    tuiWidget->width = width;
-    tuiWidget->height = height;
-    tuiWidget->show_bounding_box = show_bounding_box;
+    tuiWidget->type = TEXT;
     int length = strlen(name);
-    tuiWidget->content = (char*)malloc(length * sizeof(char));
-    memcpy(tuiWidget->name, name, length * sizeof(char));
+    tuiWidget->name = (char*)malloc(length + 1);
+    memcpy(tuiWidget->name, name,  length + 1);
     length = strlen(content);
     tuiWidget->nxt = NULL;
-    tuiWidget->content = (char*)malloc(length * sizeof(char));
-    memcpy(tuiWidget->content, content, length * sizeof(char));
+    tuiWidget->image = NULL;
+    tuiWidget->width = 0;
+    tuiWidget->height = length;
+    tuiWidget->chosen = false;
+    tuiWidget->center = true;
+    tuiWidget->text = (char*)malloc(length + 1);
+    memcpy(tuiWidget->text, content, length + 1);
     return tuiWidget;
 }
-
+struct TUIWidget* constructImage(int width, int height, const char* name, char** image)
+{
+    struct TUIWidget* tuiWidget;
+    if(!(tuiWidget = (struct TUIWidget*)malloc(sizeof(struct TUIWidget))))
+    {
+        printf("Error: cannot construct new TUIWidget instance due to malloc failure.\n");
+        return NULL;
+    }
+    tuiWidget->type = IMAGE;
+    int length = strlen(name);
+    tuiWidget->name = (char*)malloc(length + 1);
+    memcpy(tuiWidget->name, name, length + 1);
+    tuiWidget->image = (char**)malloc(width * sizeof(char*));
+    tuiWidget->width = width;
+    tuiWidget->height = height;
+    tuiWidget->chosen = false;
+    tuiWidget->center = true;
+    for(int i = 0; i < width; i++)
+    {
+        tuiWidget->image[i] = (char*)malloc(height * 3 + 1);
+        memcpy(tuiWidget->image[i], image[i], height * 3 + 1);
+    }
+    tuiWidget->nxt = NULL;
+    tuiWidget->text = NULL;
+    return tuiWidget;
+}
 void deconstructTUIWidget(struct TUIWidget* tuiWidget)
 {
     tuiWidget->nxt = NULL;
-    free(tuiWidget->content);
-    tuiWidget->content = NULL;
+    free(tuiWidget->text);
+    tuiWidget->text = NULL;
+    free(tuiWidget->image);
+    tuiWidget->image = NULL;
     free(tuiWidget);
 }
 
@@ -48,15 +72,14 @@ struct TUIManager* constructTUIManager()
     struct TUIManager* tuiManager;
     if(!(tuiManager = (struct TUIManager*)malloc(sizeof(struct TUIManager))))
     {
-        printf("Error: cannot construct new TUIManager instance due to malooc failure.\n");
+        printf("Error: cannot construct new TUIManager instance due to malloc failure.\n");
         return NULL;
     }
     tuiManager->head = tuiManager->tail = NULL;
-    tuiManager->width = tuiManager->height = 0;
     return tuiManager;
 }
 
-void addTUIWidgetInstance(struct TUIManager* tuiManager, struct TUIWidget* tuiWidget)
+void addTUIWidgetFront(struct TUIManager* tuiManager, struct TUIWidget* tuiWidget)
 {
     if(tuiWidget == NULL)
     {
@@ -71,18 +94,19 @@ void addTUIWidgetInstance(struct TUIManager* tuiManager, struct TUIWidget* tuiWi
     }
 }
 
-/**
- * almost the same as addTUIWidget.
- */
-void addTUIWidget(struct TUIManager* tuiManager, struct Vec2i pos, int width, int height, bool show_bounding_box, const char* name, const char* content)
+void addTUIWidgetBack(struct TUIManager* tuiManager, struct TUIWidget* tuiWidget)
 {
-    struct TUIWidget* tuiWidget = constructTUIWidget(pos, width, height, show_bounding_box, name, content);
     if(tuiWidget == NULL)
     {
-        printf("Error: construction of new TUIWidget instance fails. No new instance was added to TUIManager.\n");
+        printf("Warning: a NULL TUIWidget instance is being added to the TUIManager. Skipped.\n");
         return ;
     }
-    addTUIWidgetInstance(tuiManager, tuiWidget);
+    if(tuiManager->head == NULL) tuiManager->head = tuiManager->tail = tuiWidget;
+    else
+    {
+        tuiManager->tail->nxt = tuiWidget;
+        tuiManager->tail = tuiWidget;
+    }
 }
 
 void destructTUIManager(struct TUIManager* tuiManager)
@@ -97,76 +121,55 @@ void destructTUIManager(struct TUIManager* tuiManager)
     free(tuiManager);
     tuiManager = NULL;
 }
-/**
- * get the character at coordinates (x, y)
- * @param tuiWidget
- * @param x
- * @param y
- * @return
- *      if the position (x, y) is outside the bounding box of tuiWidget, returns -1
- *      else returns the character to be displayed
- */
-static char get_char_inside_window(struct TUIWidget* tuiWidget, int x, int y)
-{
-    int right_bound = tuiWidget->pos.x + tuiWidget->width + 1;
-    int bottom_bound = tuiWidget->pos.y + tuiWidget->height + 1;
-    if(x < tuiWidget->pos.x || x > bottom_bound || y < tuiWidget->pos.y || y > right_bound) return 0;
-    bool at_corner_x = (x == tuiWidget->pos.x) || (x == bottom_bound);
-    bool at_corner_y = (y == tuiWidget->pos.y) || (y == right_bound);
-    if (tuiWidget->show_bounding_box)
-    {
-        if(at_corner_x && at_corner_y) return '+';
-        else if (at_corner_x) return '-';
-        else if (at_corner_y) return '|';
-    }
-    else if(at_corner_x || at_corner_y) return ' ';
-    int offset = (x - tuiWidget->pos.x - 1) * tuiWidget->height + y - tuiWidget->pos.y - 1;
-    return tuiWidget->content[offset];
-}
 
-void setBounding(struct TUIManager* tuiManager, char *name, bool show_bounding_box)
+void setChosen(struct TUIManager* tuiManager, const char* name, bool chosen)
 {
-    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
+    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget; tuiWidget = tuiWidget->nxt)
     {
         if(strcmp(tuiWidget->name, name) == 0)
         {
-            tuiWidget->show_bounding_box = show_bounding_box;
-            break;
+            tuiWidget->chosen = chosen;
+            return ;
         }
     }
 }
 
-void render(struct TUIManager* tuiManager)
+void render(struct TUIManager* tuiManager, struct Cursor* cursor)
 {
-    static char frame_buf[MAX_BUFLINES][MAX_BUFCOLUMNS];
-    memset(frame_buf, 0, sizeof(frame_buf));
     clear_output();
-    for(int i = 0; i < tuiManager->width; i++)
+    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
     {
-        for(int j = 0; j < tuiManager->height; j++)
+        if(tuiWidget->type == TEXT)
         {
-            for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
+            if(tuiWidget->chosen)
             {
-                char ch = get_char_inside_window(tuiWidget, i, j);
-                if(ch)
+                if(tuiWidget->center)
                 {
-                    frame_buf[i][j] = ch;
-                    break;
+                    int padding_len = ((MAX_BUFCOLUMNS - tuiWidget->height - cursor->len_left
+                                        - cursor->len_right) >> 1);
+                    for(int i = 0; i < padding_len; i++) putchar(' ');
                 }
+                for(int i = 0; i < cursor->len_left; i++) putchar(cursor->cursor_l[i]);
+                printf("%s", tuiWidget->text);
+                for(int i = 0; i < cursor->len_right; i++)
+                    putchar(cursor->cursor_r[i]);
+                putchar('\n');
+            }
+            else
+            {
+                if(tuiWidget->center)
+                    for(int i = 0; i < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; i++) putchar(' ');
+                printf("%s\n", tuiWidget->text);
+            }
+        }
+        else
+        {
+            for(int i = 0; i < tuiWidget->width; i++)
+            {
+                if(tuiWidget->center)
+                    for(int j = 0; j < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; j++) putchar(' ');
+                printf("%s\n", tuiWidget->image[i]);
             }
         }
     }
-    for(int i = 0; i < tuiManager->width; i++)
-        printf("%s\n", frame_buf[i]);
 }
-
-void sequenceRender(struct TUIManager *tuiManager)
-{
-    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
-    {
-
-    }
-}
-
-#undef MAX_BUFCOLUMNS
-#undef MAX_BUFLINES

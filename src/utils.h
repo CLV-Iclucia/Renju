@@ -1,12 +1,15 @@
 #ifndef RENJU_UTILS_H
 #define RENJU_UTILS_H
 #include <stdbool.h>
+#include <bits/types/FILE.h>
+
 #define UP (-1)
 #define DOWN 1
 #define CONFIRM 0
 #define UNKNOWN 2
 int stringstream(const char*, int*);
 int getLine(char*, int);
+int fgetLine(FILE* fp, char*, int);
 static inline int min(int a, int b)
 {
     return a > b ? b : a;
@@ -32,4 +35,5 @@ struct Vec2i
 {
     int x, y;
 };
+int read_num(FILE* fp);
 #endif

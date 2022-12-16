@@ -26,16 +26,37 @@ int stringstream(const char* str, int* p)
 int getLine(char* str, int n)
 {
     int tot_input;
-    char ch;
+    int ch;
     for(int i = 0; i <= n ; i++)
         str[i] = 0;
     for(tot_input = 0; tot_input < n; tot_input++)
     {
         ch = getchar();
         if (ch == '\n' || ch == '\r')return tot_input;
-        else str[tot_input] = ch;
+        else str[tot_input] = (char)ch;
     }
     while((ch = getchar()) != '\n' && ch != '\r' && ch != EOF);
+    str[n] = 0;
+    return tot_input + 1;
+}
+
+int fgetLine(FILE* fp, char* str, int n)
+{
+    int tot_input;
+    int ch;
+    for(int i = 0; i <= n ; i++)
+        str[i] = 0;
+    for(tot_input = 0; tot_input < n; tot_input++)
+    {
+        ch = fgetc(fp);
+        if (ch == '\n' || ch == '\r')
+        {
+            str[tot_input] = 0;
+            return tot_input;
+        }
+        else str[tot_input] = (char)ch;
+    }
+    while((ch = fgetc(fp)) != '\n' && ch != '\r' && ch != EOF);
     str[n] = 0;
     return tot_input + 1;
 }
@@ -103,5 +124,20 @@ int getControlInput()
             else return UNKNOWN;
         }
     }
+    else if(opt == '\r') return CONFIRM;
+    else return UNKNOWN;
 #endif
+}
+
+int read_num(FILE *fp)
+{
+    int x = 0;
+    char c = fgetc(fp);
+    while(!isdigit(c)) c = fgetc(fp);
+    while(isdigit(c))
+    {
+        x = (x << 3) + (x << 1) + (c ^ 48);
+        c = fgetc(fp);
+    }
+    return x;
 }
