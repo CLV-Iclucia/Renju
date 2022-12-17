@@ -8,7 +8,13 @@
 #include "GameCore.h"
 #include "TUI.h"
 #define MAX_BUFCOLUMNS 96
-struct TUIWidget* constructText(const char* name, const char* content)
+#define initBase(tuiWidget) tuiWidget->prv = NULL;\
+                        tuiWidget->nxt = NULL;    \
+                        tuiWidget->opt = NULL;    \
+                        tuiWidget->center = true; \
+                        tuiWidget->nxtTUI = NULL;
+static struct Cursor* cursor;
+struct TUIWidget* constructText(const char* content)
 {
     struct TUIWidget* tuiWidget;
     if(!(tuiWidget = (struct TUIWidget*)malloc(sizeof(struct TUIWidget))))
@@ -17,21 +23,16 @@ struct TUIWidget* constructText(const char* name, const char* content)
         return NULL;
     }
     tuiWidget->type = TEXT;
-    int length = strlen(name);
-    tuiWidget->name = (char*)malloc(length + 1);
-    memcpy(tuiWidget->name, name,  length + 1);
-    length = strlen(content);
-    tuiWidget->nxt = NULL;
+    int length = strlen(content);
     tuiWidget->image = NULL;
     tuiWidget->width = 0;
     tuiWidget->height = length;
-    tuiWidget->chosen = false;
-    tuiWidget->center = true;
+    initBase(tuiWidget);
     tuiWidget->text = (char*)malloc(length + 1);
     memcpy(tuiWidget->text, content, length + 1);
     return tuiWidget;
 }
-struct TUIWidget* constructImage(int width, int height, const char* name, char** image)
+struct TUIWidget* constructImage(int width, int height, char** image)
 {
     struct TUIWidget* tuiWidget;
     if(!(tuiWidget = (struct TUIWidget*)malloc(sizeof(struct TUIWidget))))
@@ -40,30 +41,68 @@ struct TUIWidget* constructImage(int width, int height, const char* name, char**
         return NULL;
     }
     tuiWidget->type = IMAGE;
-    int length = strlen(name);
-    tuiWidget->name = (char*)malloc(length + 1);
-    memcpy(tuiWidget->name, name, length + 1);
     tuiWidget->image = (char**)malloc(width * sizeof(char*));
     tuiWidget->width = width;
     tuiWidget->height = height;
-    tuiWidget->chosen = false;
-    tuiWidget->center = true;
+    initBase(tuiWidget);
+    tuiWidget->text = NULL;
     for(int i = 0; i < width; i++)
     {
         tuiWidget->image[i] = (char*)malloc(height * 3 + 1);
         memcpy(tuiWidget->image[i], image[i], height * 3 + 1);
     }
-    tuiWidget->nxt = NULL;
-    tuiWidget->text = NULL;
     return tuiWidget;
 }
-void deconstructTUIWidget(struct TUIWidget* tuiWidget)
+
+struct TUIWidget* constructOption(const char* text)
 {
-    tuiWidget->nxt = NULL;
-    free(tuiWidget->text);
-    tuiWidget->text = NULL;
-    free(tuiWidget->image);
-    tuiWidget->image = NULL;
+    struct TUIWidget* tuiWidget = constructText(text);
+    tuiWidget->type = OPTION;
+    return tuiWidget;
+}
+
+struct OptionEntry *constructOptionEntry(const char *str)
+{
+    struct OptionEntry* optionEntry = (struct OptionEntry*) malloc(sizeof(struct OptionEntry));
+    optionEntry->n = strlen(str);
+    memcpy(optionEntry->str, str, optionEntry->n + 1);
+    optionEntry->prv = optionEntry->nxt = NULL;
+    return optionEntry;
+}
+
+void addOptionEntry(struct TUIWidget* tuiWidget, struct OptionEntry* opt)
+{
+    if(tuiWidget->type != OPTION)
+    {
+        printf("Warning: cannot add an OptionEntry to a non-option widget. Skipped.\n");
+        return ;
+    }
+    if(opt == NULL)
+    {
+        printf("Warning: a NULL OptionEntry instance is being added to the TUIWidget. Skipped.\n");
+        return ;
+    }
+    if(tuiWidget->opt == NULL) tuiWidget->opt = opt;
+    else
+    {
+        LINK(opt, tuiWidget->opt);
+        tuiWidget->opt = opt;
+    }
+}
+
+void destructTUIWidget(struct TUIWidget* tuiWidget)
+{
+    struct OptionEntry* optionEntry = tuiWidget->opt;
+    while(optionEntry != NULL)
+    {
+        struct OptionEntry* nxtOpt = optionEntry->nxt;
+        nxtOpt->prv = NULL;
+        free(optionEntry);
+        optionEntry = nxtOpt;
+    }
+    DELETE(tuiWidget->text);
+    DELETE(tuiWidget->image);
+    tuiWidget->nxtTUI = NULL;
     free(tuiWidget);
 }
 
@@ -75,6 +114,8 @@ struct TUIManager* constructTUIManager()
         printf("Error: cannot construct new TUIManager instance due to malloc failure.\n");
         return NULL;
     }
+    //by default, only the option widgets and text widgets can be chosen by cursor.
+    tuiManager->choose_type = CHOOSE_TEXT | CHOOSE_OPTION;
     tuiManager->head = tuiManager->tail = NULL;
     return tuiManager;
 }
@@ -89,7 +130,7 @@ void addTUIWidgetFront(struct TUIManager* tuiManager, struct TUIWidget* tuiWidge
     if(tuiManager->head == NULL) tuiManager->head = tuiManager->tail = tuiWidget;
     else
     {
-        tuiWidget->nxt = tuiManager->head;
+        LINK(tuiWidget, tuiManager->head);
         tuiManager->head = tuiWidget;
     }
 }
@@ -104,7 +145,7 @@ void addTUIWidgetBack(struct TUIManager* tuiManager, struct TUIWidget* tuiWidget
     if(tuiManager->head == NULL) tuiManager->head = tuiManager->tail = tuiWidget;
     else
     {
-        tuiManager->tail->nxt = tuiWidget;
+        LINK(tuiManager->tail, tuiWidget);
         tuiManager->tail = tuiWidget;
     }
 }
@@ -115,61 +156,137 @@ void destructTUIManager(struct TUIManager* tuiManager)
     while(tuiWidget != NULL)
     {
         struct TUIWidget* nxtWidget = tuiWidget->nxt;
-        deconstructTUIWidget(tuiWidget);
+        destructTUIWidget(tuiWidget);
         tuiWidget = nxtWidget;
     }
     free(tuiManager);
-    tuiManager = NULL;
 }
 
-void setChosen(struct TUIManager* tuiManager, const char* name, bool chosen)
+bool processControlSignal(struct TUIManager *tuiManager, int controlSignal)
 {
-    for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget; tuiWidget = tuiWidget->nxt)
+    if(tuiManager->cur == NULL) return true;
+    switch (controlSignal)
     {
-        if(strcmp(tuiWidget->name, name) == 0)
+        case SIGNAL_UP:
+            do
+            {
+                if(tuiManager->cur == tuiManager->head) tuiManager->cur = tuiManager->tail;
+                else tuiManager->cur = tuiManager->cur->prv;
+            }while(!(tuiManager->choose_type & (1 << (tuiManager->cur->type))));
+            break;
+        case SIGNAL_DOWN:
+            do
+            {
+                if(tuiManager->cur == tuiManager->tail) tuiManager->cur = tuiManager->head;
+                else tuiManager->cur = tuiManager->cur->nxt;
+            }while(!(tuiManager->choose_type & (1 << (tuiManager->cur->type))));
+            break;
+        case SIGNAL_LEFT:
+            if(tuiManager->cur->type == OPTION && tuiManager->cur->opt->prv != NULL)
+                tuiManager->cur->opt = tuiManager->cur->opt->prv;
+            break;
+        case SIGNAL_RIGHT:
+            if(tuiManager->cur->type == OPTION && tuiManager->cur->opt->nxt != NULL)
+                tuiManager->cur->opt = tuiManager->cur->opt->nxt;
+            break;
+        case SIGNAL_CONFIRM:
+            if(tuiManager->cur->type == OPTION)
+            {
+                if(tuiManager->confirm != NULL)tuiManager->confirm(tuiManager);
+                else return true;
+            }
+            else
+            {
+                if(tuiManager->cur->nxtTUI != NULL)
+                    TUI(tuiManager->cur->nxtTUI);
+                else return true;
+            }
+        default:
+            break;
+    }
+    return false;
+}
+
+static void renderText(struct TUIWidget* tuiWidget, bool chosen)
+{
+    if(chosen)
+    {
+        if(tuiWidget->center)
         {
-            tuiWidget->chosen = chosen;
-            return ;
+            int padding_len = ((MAX_BUFCOLUMNS - tuiWidget->height - cursor->len_left
+                                - cursor->len_right) >> 1);
+            for(int i = 0; i < padding_len; i++) putchar(' ');
         }
+        for(int i = 0; i < cursor->len_left; i++) putchar(cursor->cursor_l[i]);
+        printf("%s", tuiWidget->text);
+        for(int i = 0; i < cursor->len_right; i++)
+            putchar(cursor->cursor_r[i]);
+        putchar('\n');
+    }
+    else
+    {
+        if(tuiWidget->center)
+            for(int i = 0; i < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; i++) putchar(' ');
+        printf("%s\n", tuiWidget->text);
     }
 }
 
-void render(struct TUIManager* tuiManager, struct Cursor* cursor)
+static void renderImage(struct TUIWidget *tuiWidget)
+{
+    for(int i = 0; i < tuiWidget->width; i++)
+    {
+        if(tuiWidget->center)
+            for(int j = 0; j < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; j++) putchar(' ');
+        printf("%s\n", tuiWidget->image[i]);
+    }
+}
+
+static void renderOption(struct TUIWidget *tuiWidget, bool chosen)
+{
+    if(chosen)
+    {
+        if(tuiWidget->center)
+        {
+            int padding_len = ((MAX_BUFCOLUMNS - tuiWidget->height - tuiWidget->opt->n -
+                                cursor->len_left - cursor->len_right - 1) >> 1);
+            for(int i = 0; i < padding_len; i++) putchar(' ');
+        }
+        for(int i = 0; i < cursor->len_left; i++) putchar(cursor->cursor_l[i]);
+        printf("%s:%s", tuiWidget->text, tuiWidget->opt->str);
+        for(int i = 0; i < cursor->len_right; i++)
+            putchar(cursor->cursor_r[i]);
+        putchar('\n');
+    }
+    else
+    {
+        if(tuiWidget->center)
+            for(int i = 0; i < (MAX_BUFCOLUMNS - tuiWidget->height - tuiWidget->opt->n) >> 1; i++) putchar(' ');
+        printf("%s:%s\n", tuiWidget->text, tuiWidget->opt->str);
+    }
+}
+
+void setCursor(struct Cursor* pCursor){ cursor = pCursor; }
+void resetCursor(){ cursor = NULL; }
+
+void render(struct TUIManager* tuiManager)
 {
     clear_output();
     for(struct TUIWidget* tuiWidget = tuiManager->head; tuiWidget != NULL; tuiWidget = tuiWidget->nxt)
     {
         if(tuiWidget->type == TEXT)
-        {
-            if(tuiWidget->chosen)
-            {
-                if(tuiWidget->center)
-                {
-                    int padding_len = ((MAX_BUFCOLUMNS - tuiWidget->height - cursor->len_left
-                                        - cursor->len_right) >> 1);
-                    for(int i = 0; i < padding_len; i++) putchar(' ');
-                }
-                for(int i = 0; i < cursor->len_left; i++) putchar(cursor->cursor_l[i]);
-                printf("%s", tuiWidget->text);
-                for(int i = 0; i < cursor->len_right; i++)
-                    putchar(cursor->cursor_r[i]);
-                putchar('\n');
-            }
-            else
-            {
-                if(tuiWidget->center)
-                    for(int i = 0; i < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; i++) putchar(' ');
-                printf("%s\n", tuiWidget->text);
-            }
-        }
-        else
-        {
-            for(int i = 0; i < tuiWidget->width; i++)
-            {
-                if(tuiWidget->center)
-                    for(int j = 0; j < (MAX_BUFCOLUMNS - tuiWidget->height) >> 1; j++) putchar(' ');
-                printf("%s\n", tuiWidget->image[i]);
-            }
-        }
+            renderText(tuiWidget, tuiManager->cur == tuiWidget);
+        else if(tuiWidget->type == IMAGE)
+            renderImage(tuiWidget);
+        else renderOption(tuiWidget, tuiManager->cur == tuiWidget);
+    }
+}
+
+void TUI(struct TUIManager* tuiManager)
+{
+    while(1)
+    {
+        render(tuiManager);
+        int controlSignal = getControlInput();
+        if(processControlSignal(tuiManager, controlSignal)) return;
     }
 }

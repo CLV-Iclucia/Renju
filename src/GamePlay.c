@@ -217,7 +217,10 @@ void gameLoop(const int gameMode, const int AIColor)
             printPrompt(currentColor);
             char ch = getchar_no_buf();
             if(!processOpt(state, ch))
+            {
                 ungetc(ch, stdin);
+                putchar(ch);
+            }
             playerPlace(state, currentColor);
         }
         else AIPlace(state, AIColor);

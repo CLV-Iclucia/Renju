@@ -6,39 +6,60 @@
  * But it is easy to try to implement a small TUI lib myself.
  * This may seem unnecessary, and it is indeed unnecessary but I'll do it anyway.
  * It just help manage certain scenes.
+ * Though it might seem unnecessary in this project, I believe that it can be really useful for many TUI programmes.
  */
 #ifndef RENJU_TUI_H
 #define RENJU_TUI_H
 #include "utils.h"
 #include "GameCore.h"
+#include "DataStructure.h"
+#define ENTRY_MAX_LENGTH 128
 #define MAX_IMAGE_SIZE 72
 #define MAX_CURSOR_LEN 8
+#define CHOOSE_TEXT 1
+#define CHOOSE_OPTION 2
+
+struct TUIManager;
 struct TUIWidget
 {
-    struct TUIWidget *nxt;
-    char *name;///< the name of the TUIWidget, used for identifying widgets
-    char **image;
-    char *text;
+    DOUBLY_LINKED_LIST(struct TUIWidget);
+    struct OptionEntry *opt;///< enabled if and only if type=OPTION
+    char **image;///< enabled if and only if type=IMAGE
+    char *text;///< enabled if and only if type=TEXT
+    struct TUIManager* nxtTUI;///< enabled if and only if type=TEXT. Points to the TUI to be triggered when triggered.
     int width, height;///< the width and height of the image
-    enum TYPE{TEXT, IMAGE} type;
-    bool chosen;
+    enum TYPE{TEXT = 0, OPTION, IMAGE} type;
     bool center;
 };
+
+struct OptionEntry
+{
+    char str[ENTRY_MAX_LENGTH];
+    DOUBLY_LINKED_LIST(struct OptionEntry);
+    int n;
+};
+
+struct OptionEntry* constructOptionEntry(const char* str);
+void addOptionEntry(struct TUIWidget* tuiWidget, struct OptionEntry* opt);
 /**
  * a constructor for TUIWidget
  * @return a new TUIWidget instance with text
  */
-struct TUIWidget* constructText(const char*, const char*);
+struct TUIWidget* constructText(const char* content);
 /**
  * a constructor for TUIWidget
  * @return a new TUIWidget instance with image
  */
-struct TUIWidget* constructImage(int, int, const char*, char**);
-
+struct TUIWidget* constructImage(int width, int height, char **image);
+/**
+ * a constructor for TUIWidget
+ * @return a new TUIWidget instance with option
+ */
+struct TUIWidget* constructOption(const char* text);
 /**
  * a destructor for TUIWidget
  */
-void deconstructTUIWidget(struct TUIWidget*);
+void destructTUIWidget(struct TUIWidget *tuiWidget);
 
 /**
  * @brief TUIManager manages the TUI widgets to be rendered in one frame. All the TUIWidgets are stored as linked list in TUIManager.
@@ -49,6 +70,9 @@ struct TUIManager
 {
     struct TUIWidget *head;// the widget closer to the head will be drawn on the top in case of overlapping
     struct TUIWidget *tail;
+    struct TUIWidget *cur;///< current widget being chosen
+    void (*confirm)(struct TUIManager* this);///< enabled when there is option in this manager and will be triggered when confirmed.
+    int choose_type;///< what kinds of widgets can be chosen, using bitmap.
 };
 /**
  * a constructor for TUIManager
@@ -59,10 +83,13 @@ struct TUIManager* constructTUIManager();
  * a destructor for TUIManager
  */
 void destructTUIManager(struct TUIManager*);
-
 void addTUIWidgetBack(struct TUIManager *tuiManager, struct TUIWidget* tuiWidget);
 void addTUIWidgetFront(struct TUIManager *tuiManager, struct TUIWidget* tuiWidget);
-void setChosen(struct TUIManager *tuiManager, const char *name, bool chosen);
+static inline void bind(struct TUIWidget* tuiWidget, struct TUIManager* tuiManager) { tuiWidget->nxtTUI = tuiManager; }
+/**
+ * @return true if we need to quit from this TUI
+ */
+bool processControlSignal(struct TUIManager *tuiManager, int controlSignal);
 
 struct Cursor
 {
@@ -70,10 +97,13 @@ struct Cursor
     char cursor_r[MAX_CURSOR_LEN + 1];
     int len_left, len_right;
 };
+void setCursor(struct Cursor* pCursor);
+void resetCursor();
 /**
  * render the UI based on TUIManager instance and Cursor instance
  * @param tuiManager
  * @param cursor
  */
-void render(struct TUIManager* tuiManager, struct Cursor* cursor);
+void render(struct TUIManager* tuiManager);
+void TUI(struct TUIManager* tuiManager);
 #endif //RENJU_TUI_H

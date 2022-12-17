@@ -119,13 +119,18 @@ int getControlInput()
         if(opt == 91)
         {
             opt = getchar_no_buf();
-            if(opt == 65 || opt == 68) return UP;
-            else if(opt == 66 || opt == 67) return DOWN;
-            else return UNKNOWN;
+            switch(opt)
+            {
+                case 65: return SIGNAL_UP;
+                case 66: return SIGNAL_DOWN;
+                case 67: return SIGNAL_RIGHT;
+                case 68: return SIGNAL_LEFT;
+                default: return SIGNAL_UNKNOWN;
+            }
         }
     }
-    else if(opt == '\r') return CONFIRM;
-    else return UNKNOWN;
+    else if(opt == '\r') return SIGNAL_CONFIRM;
+    else return SIGNAL_UNKNOWN;
 #endif
 }
 

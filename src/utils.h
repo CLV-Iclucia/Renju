@@ -2,11 +2,14 @@
 #define RENJU_UTILS_H
 #include <stdbool.h>
 #include <bits/types/FILE.h>
-
-#define UP (-1)
-#define DOWN 1
-#define CONFIRM 0
-#define UNKNOWN 2
+#define DELETE(p) free(p);\
+                    p = NULL
+#define SIGNAL_UP 0
+#define SIGNAL_DOWN 1
+#define SIGNAL_LEFT 2
+#define SIGNAL_RIGHT 3
+#define SIGNAL_CONFIRM 4
+#define SIGNAL_UNKNOWN 5
 int stringstream(const char*, int*);
 int getLine(char*, int);
 int fgetLine(FILE* fp, char*, int);
