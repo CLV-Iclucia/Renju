@@ -15,6 +15,11 @@
 #define WHITE_RENJU_MASK 682//the bitmask of five white stones in a row is 1010101010
 #define BLACK_RENJU_MASK 1023//the bitmask of five white stones in a row is 1111111111
 #define ALIGNMENT 16//better alignment for the compiler to optimize
+#define DIR_NUM 4
+#define ROW 0
+#define COL 1
+#define DIAG_L 2
+#define DIAG_R 3
 /**
  * Use four/six int arrays to store current state of the state.
  * The four arrays store the state in column, row and two diagonals respectively.
@@ -39,10 +44,50 @@ struct State
     int col[ALIGNMENT];
 };
 
+struct Cross
+{
+    int *line[DIR_NUM], idx[DIR_NUM];
+};
+
 struct State* constructState();
 static inline int GET(const struct State* state, int i, int j)
 {
     return (state->row[i] >> (j << 1)) & 3;
+}
+static inline struct Cross takeCross(const struct State* state, int i, int j)
+{
+    struct Cross cross;
+    cross.line[ROW] = &(state->row[i]);
+    cross.idx[ROW] = j;
+    cross.line[COL] = &(state->col[j]);
+    cross.idx[COL] = i;
+    //I don't know which one is faster, so I'll do a comparison in the future.
+#ifdef STATE_VERSION_TEST
+    state->diagL[i - j + SIZE - 1] |= (color << ((i > j ? j : i) << 1));
+    state->diagR[i + j] |= (color << ((i + j <= SIZE - 1 ? j : SIZE - 1 - i) << 1));
+#else
+    if(j > i)
+    {
+        cross.line[DIAG_L] = &(state->diagLU[j - i]);
+        cross.idx[DIAG_L] = i;
+    }
+    else
+    {
+        cross.line[DIAG_L] = &(state->diagLD[i - j]);
+        cross.idx[DIAG_L] = j;
+    }
+    if(i + j <= SIZE - 1)
+    {
+        cross.line[DIAG_R] = &(state->diagRU[i + j]);
+        cross.idx[DIAG_R] = j;
+    }
+    else
+    {
+        cross.line[DIAG_R] = &(state->diagRD[i + j - SIZE + 1]);
+        cross.idx[DIAG_R] = SIZE - 1 - i;
+    }
+    return cross;
+#endif
 }
 static inline void PLACE(struct State* const state, int i, int j, int color)
 {
@@ -59,6 +104,19 @@ static inline void PLACE(struct State* const state, int i, int j, int color)
     else state->diagRD[i + j - SIZE + 1] |= (color << ((SIZE - 1 - i) << 1));
 #endif
 }
+
+static inline void PLACE_CROSS(struct Cross cross, int color)
+{
+    for(int i = 0; i < DIR_NUM; i++)
+        *(cross.line[i]) |= (color << (cross.idx[i] << 1));
+}
+
+static inline void CLEAR_CROSS(struct Cross cross)
+{
+    for(int i = 0; i < DIR_NUM; i++)
+        *(cross.line[i]) &= ~(3 << (cross.idx[i] << 1));
+}
+
 static inline void CLEAR(struct State* const state, int i, int j)
 {
     state->row[i] &= ~(3 << (j << 1));

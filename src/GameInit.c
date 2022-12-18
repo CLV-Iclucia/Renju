@@ -182,9 +182,11 @@ void initNewGameScreen()
     addOptionEntry(BlackPlayer, constructOptionEntry("Human"));
     addOptionEntry(BlackPlayer, constructOptionEntry("AI"));
     struct TUIWidget* WhitePlayer = constructOption("White");
-    WhitePlayer->opt = BlackPlayer->opt;
+    addOptionEntry(WhitePlayer, constructOptionEntry("Human"));
+    addOptionEntry(WhitePlayer, constructOptionEntry("AI"));
     addTUIWidgetBack(newGameManager, BlackPlayer);
     addTUIWidgetBack(newGameManager, WhitePlayer);
+    addTUIWidgetBack(newGameManager, constructText("Back"));
     newGameManager->confirm = &confirm_game;
     newGameManager->cur = BlackPlayer;
 }

@@ -11,14 +11,11 @@
 #define BBEBB 975
 #define BEBBB 1011
 #define BBBEB 831
-#define DIR_NUM 4
-#define ROW 0
-#define COL 1
-#define DIAGL 2
-#define DIAGR 3
+
 static const int BLACK_DOUBLE_FOUR_SAME_LINE[3] = {13299, 62415, 258879};
 static const int dx[] = {0, 1, 1, -1};
 static const int dy[] = {1, 0, 1, 1};
+static struct State* global_state;
 //11001111110011, 1111001111001111, 111111001100111111
 /**
  *  whether it is OK to place a black stone at (x, y), considering forbidden moves
@@ -35,70 +32,154 @@ bool queryBlackPlaceable(struct State* const state, int x, int y)
         return !forbid;
     }
     else return false;
+}/*
+bool queryBlackPlaceable(struct State* const state, int x, int y)
+{
+    if(x < 0 || y < 0 || x >= SIZE || y >= SIZE) return false;
+    if(isEmpty(x,y))
+    {
+        struct Cross cross = takeCross(state, x, y);
+        bool forbid = false;
+        PLACE_CROSS(cross, BLACK);
+        forbid = checkForbid(state, x, y);
+        CLEAR_CROSS(cross);
+        return !forbid;
+    }
+    else return false;
 }
-
 static bool checkLiveThreeDiagL(struct State *const state, int x, int y)
 {
-    int diag = y > x ? state->diagLU[y - x] : state->diagLD[x - y];
-    int idx = min(x, y);
-    //in fact the upper bound for i can be more specific since not all diagonals have 15 grids
-    //but that will just cause a few more loops and do nothing, because they won't pass the checkGrids
-    for(int i = max(-2, -idx); i <= min(0, SIZE - 3 - idx); i++)
-        if(checkGrids(diag, idx + i, 3) == BBB)//find a BBB at [idx + i, idx + i + 2]
-        {
-            if(queryBlackPlaceable(state, x + i - 1, y + i - 1))//can form a four at [idx + i - 1, idx + i + 2]
-            {
-                PLACE(state, x + i - 1, y + i - 1, BLACK);
-                if(queryBlackPlaceable(state, x + i - 2, y + i - 2) && queryBlackPlaceable(state, x + i + 3, y + i + 3))
-                {
-                    CLEAR(state, x + i - 1, y + i - 1);
-                    return true;
-                }
-                CLEAR(state, x + i - 1, y + i - 1);
-            }
-            if(queryBlackPlaceable(state,x + i + 3, y + i + 3))//can form a four at [idx + i, idx + i + 3]
-            {
-                PLACE(state, x + i + 3, y + i + 3, BLACK);
-                if(queryBlackPlaceable(state, x + i - 1, y + i - 1) && queryBlackPlaceable(state, x + i + 4, y + i + 4))
-                {
-                    CLEAR(state, x + i + 3, y + i + 3);
-                    return true;
-                }
-                CLEAR(state, x + i + 3, y + i + 3);
-            }
-        }
-    for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
+    struct Cross cross = takeCross(state, x, y);
+    for(int k = 0; k < DIR_NUM; k++)
     {
-        if(checkGrids(diag, idx + i, 6) == EBBEBE)//find pattern EBBEBE at [i, i + 5]
-        {
-            if(queryBlackPlaceable(state,x + i + 3, y + i + 3))//can form a four at [idx + i, idx + i + 3]
+        int local_l = *(cross.line[k]);
+        int idx = cross.idx[k];
+        for(int i = max(-2, -idx); i <= min(0, SIZE - 3 - idx); i++)
+            if(checkGrids(local_l, idx + i, 3) == BBB)//find a BBB at [idx + i, idx + i + 2]
             {
-                PLACE(state, x + i + 3, y + i + 3, BLACK);
-                if(queryBlackPlaceable(state, x + i, y + i) && queryBlackPlaceable(state, x + i + 5, y + i + 5))
+                if(queryBlackPlaceable(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]))//can form a four at [idx + i - 1, idx + i + 2]
                 {
-                    CLEAR(state, x + i + 3, y + i + 3);
-                    return true;
+                    PLACE(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k], BLACK);
+                    if(queryBlackPlaceable(state, x + (i - 2) * dx[k], y + (i - 2) * dy[k])
+                        && queryBlackPlaceable(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]))
+                    {
+                        CLEAR(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]);
+                        return true;
+                    }
+                    CLEAR(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]);
                 }
-                CLEAR(state, x + i + 3, y + i + 3);
+                if(queryBlackPlaceable(state,x + (i + 3) * dx[k], y + (i + 3) * dy[k]))//can form a four at [idx + i, idx + i + 3]
+                {
+                    PLACE(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k], BLACK);
+                    if(queryBlackPlaceable(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k])
+                        && queryBlackPlaceable(state, x + (i + 4) * dx[k], y + (i + 4) * dy[k]))
+                    {
+                        CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+                        return true;
+                    }
+                    CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+                }
             }
-        }
-        else if(checkGrids(diag, idx + i, 6) == EBEBBE)
+        for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
         {
-            if(queryBlackPlaceable(state,x + i + 2, y + i + 2))//can form a four at [idx + i, idx + i + 3]
+            if(checkGrids(local_l, idx + i, 6) == EBBEBE)//find pattern EBBEBE at [i, i + 5]
             {
-                PLACE(state, x + i + 2, y + i + 2, BLACK);
-                if(queryBlackPlaceable(state, x + i, y + i) && queryBlackPlaceable(state, x + i + 5, y + i + 5))
+                if(queryBlackPlaceable(state,x + (i + 3) * dx[k], y + (i + 3) * dy[k]))//can form a four at [idx + i, idx + i + 3]
                 {
-                    CLEAR(state, x + i + 2, y + i + 2);
-                    return true;
+                    PLACE(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k], BLACK);
+                    if(queryBlackPlaceable(state, x + i * dx[k], y + i * dy[k])
+                        && queryBlackPlaceable(state, x + (i + 5) * dx[k], y + (i + 5) * dy[k]))
+                    {
+                        CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+                        return true;
+                    }
+                    CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
                 }
-                CLEAR(state, x + i + 2, y + i + 2);
+            }
+            else if(checkGrids(local_l, idx + i, 6) == EBEBBE)
+            {
+                if(queryBlackPlaceable(state,x + (i + 2) * dx[k], y + (i + 2) * dy[k]))//can form a four at [idx + i, idx + i + 3]
+                {
+                    PLACE(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k], BLACK);
+                    if(queryBlackPlaceable(state, x + i * dx[k], y + i * dy[k])
+                        && queryBlackPlaceable(state, x + (i + 5) * dx[k], y + (i + 5) * dy[k]))
+                    {
+                        CLEAR(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k]);
+                        return true;
+                    }
+                    CLEAR(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k]);
+                }
             }
         }
     }
     return false;
 }
-
+*/
+static bool checkLiveThreeDiagL(struct State *const state, int x, int y)
+{
+    struct Cross cross = takeCross(state, x, y);
+    int k = DIAG_L;
+    int local_l = *(cross.line[k]);
+    int idx = cross.idx[k];
+    for(int i = max(-2, -idx); i <= min(0, SIZE - 3 - idx); i++)
+        if(checkGrids(local_l, idx + i, 3) == BBB)//find a BBB at [idx + i, idx + i + 2]
+        {
+            if(queryBlackPlaceable(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]))//can form a four at [idx + i - 1, idx + i + 2]
+            {
+                PLACE(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k], BLACK);
+                if(queryBlackPlaceable(state, x + (i - 2) * dx[k], y + (i - 2) * dy[k])
+                   && queryBlackPlaceable(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]))
+                {
+                    CLEAR(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]);
+                    return true;
+                }
+                CLEAR(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k]);
+            }
+            if(queryBlackPlaceable(state,x + (i + 3) * dx[k], y + (i + 3) * dy[k]))//can form a four at [idx + i, idx + i + 3]
+            {
+                PLACE(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k], BLACK);
+                if(queryBlackPlaceable(state, x + (i - 1) * dx[k], y + (i - 1) * dy[k])
+                   && queryBlackPlaceable(state, x + (i + 4) * dx[k], y + (i + 4) * dy[k]))
+                {
+                    CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+                    return true;
+                }
+                CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+            }
+        }
+    for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
+    {
+        if(checkGrids(local_l, idx + i, 6) == EBBEBE)//find pattern EBBEBE at [i, i + 5]
+        {
+            if(queryBlackPlaceable(state,x + (i + 3) * dx[k], y + (i + 3) * dy[k]))//can form a four at [idx + i, idx + i + 3]
+            {
+                PLACE(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k], BLACK);
+                if(queryBlackPlaceable(state, x + i * dx[k], y + i * dy[k])
+                   && queryBlackPlaceable(state, x + (i + 5) * dx[k], y + (i + 5) * dy[k]))
+                {
+                    CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+                    return true;
+                }
+                CLEAR(state, x + (i + 3) * dx[k], y + (i + 3) * dy[k]);
+            }
+        }
+        else if(checkGrids(local_l, idx + i, 6) == EBEBBE)
+        {
+            if(queryBlackPlaceable(state,x + (i + 2) * dx[k], y + (i + 2) * dy[k]))//can form a four at [idx + i, idx + i + 3]
+            {
+                PLACE(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k], BLACK);
+                if(queryBlackPlaceable(state, x + i * dx[k], y + i * dy[k])
+                   && queryBlackPlaceable(state, x + (i + 5) * dx[k], y + (i + 5) * dy[k]))
+                {
+                    CLEAR(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k]);
+                    return true;
+                }
+                CLEAR(state, x + (i + 2) * dx[k], y + (i + 2) * dy[k]);
+            }
+        }
+    }
+    return false;
+}
 static bool checkLiveThreeDiagR(struct State *const state, int x, int y)
 {
     int diag, idx;

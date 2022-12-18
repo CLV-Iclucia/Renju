@@ -4,7 +4,6 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 #include "GameCore.h"
 #include "TUI.h"
 #define MAX_BUFCOLUMNS 96
@@ -92,15 +91,20 @@ void addOptionEntry(struct TUIWidget* tuiWidget, struct OptionEntry* opt)
 
 void destructTUIWidget(struct TUIWidget* tuiWidget)
 {
-    struct OptionEntry* optionEntry = tuiWidget->opt;
-    while(optionEntry != NULL)
+    if(tuiWidget->type == OPTION)
     {
-        struct OptionEntry* nxtOpt = optionEntry->nxt;
-        nxtOpt->prv = NULL;
-        free(optionEntry);
-        optionEntry = nxtOpt;
+        struct OptionEntry* optionEntry = tuiWidget->opt->nxt;
+        while(optionEntry->prv != NULL) optionEntry = optionEntry->prv;
+        while(optionEntry != NULL)
+        {
+            struct OptionEntry* nxtOpt = optionEntry->nxt;
+            free(optionEntry);
+            optionEntry = nxtOpt;
+            if(optionEntry) optionEntry->prv = NULL;
+        }
     }
     DELETE(tuiWidget->text);
+    for(int i = 0; i < tuiWidget->width; i++) { DELETE(tuiWidget->image[i]); }
     DELETE(tuiWidget->image);
     tuiWidget->nxtTUI = NULL;
     free(tuiWidget);
