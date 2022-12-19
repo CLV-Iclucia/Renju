@@ -5,7 +5,7 @@
 #include "GameCore.h"
 #define INSIDE(x,y) ((x) >= 0 && (y) >= 0 && (x) < SIZE && (y) < SIZE)
 #define STEP(x, step, dir) (x+(step)*(d##x[dir]))
-#define isEmpty(step) (!(local_l & (3 << ((idx + (step)) << 1))))
+#define isEmpty(step) (!(local_l & (3 << ((idx + i + (step)) << 1))))
 #define PLACEABLE(step) (INSIDE(STEP(x, i + (step), k), STEP(y, i + (step), k)) && isEmpty(step))
 #define BLACK_LONG_MASK 4095
 #define BBBE 63//three black stones in a row, one possible situation for a live three
@@ -49,7 +49,7 @@ static bool checkLiveThree(int x, int y)
         int local_l = *(cross.line[k]);
         int idx = cross.idx[k];
         bool find = false;
-        for(int i = max(-2, -idx); i <= min(0, SIZE - 5 - idx); i++)
+        for(int i = max(-2, -idx); i <= min(0, SIZE - 4 - idx); i++)
         {
             if(checkGrids(local_l, idx + i, 4) == BBBE)//find a BBBE at [idx + i, idx + i + 3]
             {
@@ -57,7 +57,7 @@ static bool checkLiveThree(int x, int y)
                 {
                     struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i - 1, k), STEP(y, i - 1, k));
                     PLACE_CROSS(cross_to_be_placed, BLACK);
-                    if(!forbid(STEP(x, -1, k), STEP(y, -1, k)))//can form a four at [idx + i - 1, idx + i + 2]
+                    if(!forbid(STEP(x, i - 1, k), STEP(y, i - 1, k)))//can form a four at [idx + i - 1, idx + i + 2]
                     {
                         if(PLACEABLE(-2))
                         {
@@ -97,6 +97,7 @@ static bool checkLiveThree(int x, int y)
         {
             cnt++;
             if(cnt == 2) return true;
+            else find = false;
         }
         for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
         {
@@ -107,10 +108,8 @@ static bool checkLiveThree(int x, int y)
                     printf("fuck!\n");
                     struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i + 3, k), STEP(y, i + 3, k));
                     PLACE_CROSS(cross_to_be_placed, BLACK);
-                    printf("%d\n", *(cross_to_be_placed.line[0]));
                     if(!forbid(STEP(x, i + 3, k), STEP(y, i + 3, k)))//can form a four at [idx + i + 1, idx + i + 4]
                     {
-                        printf("%d\n", *(cross_to_be_placed.line[0]));
                         if(PLACEABLE(0) && PLACEABLE(5))
                         {
                             if(check_forbid(STEP(x, i, k), STEP(y, i, k))
@@ -121,9 +120,7 @@ static bool checkLiveThree(int x, int y)
                                 break;
                             }
                         }
-                        printf("%d %d\n", *(cross_to_be_placed.line[0]), *(cross_to_be_placed.line[0]) & (~(3 << ((cross_to_be_placed.idx[0]) << 1))));
                         CLEAR_CROSS(cross_to_be_placed);
-                        printf("%d %d\n", *(cross_to_be_placed.line[0]), 3 << (cross_to_be_placed.idx[0] << 1));
                     }
                 }
             }
@@ -177,7 +174,7 @@ static bool checkFour(int x, int y)
                     find = true;
                     break;
                 }
-                else if(PLACEABLE(4) && check_forbid(STEP(x, i + 4, k), STEP(y, i - 1, k)))
+                else if(PLACEABLE(4) && check_forbid(STEP(x, i + 4, k), STEP(y, i + 4, k)))
                 {
                     find = true; //can form a five at [idx + i, idx + i + 4]
                     break;
@@ -188,6 +185,7 @@ static bool checkFour(int x, int y)
         {
             cnt++;
             if(cnt == 2) return true;
+            else find = false;
         }
         for(int i = max(-4, -idx); i <= min(0, SIZE - 5 - idx); i++)
         {
