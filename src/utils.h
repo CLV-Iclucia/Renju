@@ -4,6 +4,7 @@
 #include <bits/types/FILE.h>
 #define DELETE(p) free(p);\
                     p = NULL
+#define swap(T, x, y) {T tmp = x; x = y; y = tmp;}
 #define SIGNAL_UP 0
 #define SIGNAL_DOWN 1
 #define SIGNAL_LEFT 2

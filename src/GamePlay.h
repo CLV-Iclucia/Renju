@@ -14,6 +14,6 @@
 void drawBoard(const struct State* state);
 void gameLoop(int gameMode, int AIColor);
 bool checkForbid(struct State* state, int x, int y);
-int checkWinner(struct State* state, int currentColor);
+int checkWinner(struct State* state, int currentColor, int x, int y);
 void playerPlace(struct State* state, int color);
 #endif

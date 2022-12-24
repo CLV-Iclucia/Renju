@@ -20,6 +20,14 @@
 #define COL 1
 #define DIAG_L 2
 #define DIAG_R 3
+//assign points for different targets
+//how to calc the point for one move: if one move achieves certain following targets then add the corresponding points
+#define FORM_RENJU (1 << 12)
+#define DESTROY_FOUR (1 << 8)
+#define FORM_FOUR (1 << 7)
+#define DESTROY_LIVE_THREE (1 << 4)
+#define FORM_LIVE_THREE (1 << 2)
+#define FORM_TWO 1
 /**
  * Use four/six int arrays to store current state of the state.
  * The four arrays store the state in column, row and two diagonals respectively.

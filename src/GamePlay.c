@@ -208,6 +208,7 @@ void gameLoop(const int gameMode, const int AIColor)
     lastPosX = -1, lastPosY = -1;
     int currentColor = BLACK;
     int ending = ENDING_NOT_END;
+    if(gameMode == GAME_MODE_PVE)initAI();
     while(1)
     {
         clear_output();
@@ -224,9 +225,10 @@ void gameLoop(const int gameMode, const int AIColor)
             playerPlace(state, currentColor);
         }
         else AIPlace(state, AIColor);
-        if((ending = checkWinner(state, currentColor)) != ENDING_NOT_END) break;
+        if((ending = checkWinner(state, currentColor, lastPosX, lastPosY)) != ENDING_NOT_END) break;
         currentColor ^= 1;
     }
+    if(gameMode == GAME_MODE_PVE)endAI();
     if(ending == ENDING_BLACK_WIN)
     {
         printf("A black Renju is formed! Black wins!\n");
@@ -251,7 +253,7 @@ void gameLoop(const int gameMode, const int AIColor)
  * The only exception occurs when the black player make a forbidden move.
  * @return the ending code of current state
  */
-int checkWinner(struct State* const state, int currentColor)
+int checkWinner(struct State* const state, int currentColor, int x, int y)
 {
     if(currentColor == WHITE)//In this case, the black player cannot win
     {
@@ -260,7 +262,7 @@ int checkWinner(struct State* const state, int currentColor)
     }
     else//The only case that white player wins is that the black player made a forbidden move.
     {
-        if(checkForbid(state, lastPosX, lastPosY))
+        if(checkForbid(state, x, y))
             return ENDING_WHITE_WIN_FORBID;
         else if(matchPattern(state, RENJU_LENGTH, BLACK_RENJU_MASK))
             return ENDING_BLACK_WIN;

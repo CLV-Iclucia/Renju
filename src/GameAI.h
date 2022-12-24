@@ -6,4 +6,6 @@
 #define RENJU_GAMEAI_H
 #include "GameCore.h"
 void AIPlace(struct State* state, int currentColor);
+void initAI();
+void endAI();
 #endif //RENJU_GAMEAI_H
