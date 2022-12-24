@@ -46,7 +46,6 @@ static inline bool empty(struct BinaryHeap *H) { return !(H->sz); }
 static inline struct HeapNode top(struct BinaryHeap *H) { return H->hp[1]; }
 static void up(struct BinaryHeap *H, int o)
 {
-
     while(H->hp[o].val >= H->hp[o >> 1].val && o)
     {
         swap(struct HeapNode, H->hp[o], H->hp[o >> 1]);
@@ -61,14 +60,14 @@ static void down(struct BinaryHeap *H, int o)
     {
         if((o << 1|1) <= H->sz)
         {
-            if(H->hp[o << 1].val < H->hp[o << 1|1].val)
+            if(H->hp[o << 1].val >= H->hp[o << 1|1].val)
             {
                 swap(struct HeapNode, H->hp[o], H->hp[o << 1]);
                 o <<= 1;
             }
             else
             {
-                swap(struct HeapNode, H->hp[o], H->hp[o << 1]);
+                swap(struct HeapNode, H->hp[o], H->hp[o << 1|1]);
                 o = o << 1|1;
             }
         }

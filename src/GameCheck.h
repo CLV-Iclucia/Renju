@@ -14,5 +14,5 @@ bool checkWhiteRenju(struct Cross cross);
 bool destroyWhiteLiveThree(int x, int y);
 bool destroyWhiteFour(int x, int y);
 int countWhiteTwo(struct Cross cross);
-int countBlackTwo(struct Cross cross);
+int countBlackTwo(struct Cross cross, int x, int y);
 #endif //RENJU_GAMECHECK_H

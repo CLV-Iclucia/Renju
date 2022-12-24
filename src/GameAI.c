@@ -13,23 +13,58 @@
 #define isEmpty(step) (!(local_l & (3 << ((idx + i + (step)) << 1))))
 #define PLACEABLE(step) (INSIDE(STEP(x, i + (step), k), STEP(y, i + (step), k)) && isEmpty(step))
 #define IS_EMPTY(x, y) (!(global_state->row[(x)] & (3 << ((y) << 1))))
+#define MAX_BRANCHES 5
+
 #define update_valid(x_min, x_max, y_min, y_max) {for(int i = x_min; i <= x_max; i++) \
                                                     for(int j = y_min; j <= y_max; j++) \
                                                         if(GET(global_state, i, j) == EMPTY)\
                                                             estimateBlackPoint(i, j);}
-#define MAX_BRANCHES 5
-#define PRE_DFS(x, y) { int tmpLastPosX = lastPosX;    \
-                        int tmpLastPosY = lastPosY;    \
-                        lastPosX = x;                  \
-                        lastPosY = y;                   \
-                        depth++;                \
-                        currentColor ^= 1;
 
-#define POST_DFS(x, y) { lastPosX = tmpLastPosX;  \
+#define UPDATE_MIN_MAX(color, axis, nd) color##_min##axis = min(color##_min##axis, nd.axis);\
+                                        color##_max##axis = max(color##_max##axis, nd.axis)
+
+#define UPDATE_ALL_MIN_MAX(nd) UPDATE_MIN_MAX(black, x, nd);\
+                                UPDATE_MIN_MAX(black, y, nd); \
+                                UPDATE_MIN_MAX(white, x, nd); \
+                                UPDATE_MIN_MAX(white, y, nd)
+
+#define RESTORE_MIN_MAX(color, axis) color##_min##axis = color##_save_min##axis;\
+                                       color##_max##axis = color##_save_max##axis
+
+#define RESTORE_ALL_MIN_MAX RESTORE_MIN_MAX(black, x);\
+                                RESTORE_MIN_MAX(black, y); \
+                                RESTORE_MIN_MAX(white, x); \
+                                RESTORE_MIN_MAX(white, y)
+
+#define BEFORE_SEARCH_CHILD        int black_save[ALIGNMENT][ALIGNMENT], white_save[ALIGNMENT][ALIGNMENT]; \
+                        int black_save_minx = black_minx, black_save_miny = black_miny, black_save_maxx = black_maxx, \
+                        black_save_maxy = black_maxy, white_save_minx = white_minx, white_save_miny = white_miny,     \
+                        white_save_maxx = white_maxx, white_save_maxy = white_maxy; \
+                        int tmpLastPosX = lastPosX;    \
+                        int tmpLastPosY = lastPosY;    \
+                        memcpy(black_save, black_point, sizeof(black_point));\
+                        memcpy(white_save, white_point, sizeof(white_point))
+
+#define BEFORE_DFS(nd) depth++; \
+                    lastPosX = nd.x;   \
+                    lastPosY = nd.y;   \
+                    PLACE(global_state, nd.x, nd.y, currentColor); \
+                    currentColor ^= 1;           \
+                    UPDATE_ALL_MIN_MAX(nd)
+
+
+#define AFTER_DFS(nd)   CLEAR(global_state, nd.x, nd.y);\
+                        depth--; \
+                        currentColor ^= 1; \
+                        RESTORE_ALL_MIN_MAX
+#define BEFORE_RETURN    lastPosX = tmpLastPosX;  \
                          lastPosY = tmpLastPosY;  \
-                         depth--;                 \
-                         currentColor ^= 1;    \
-                         CLEAR(global_state, x, y);}
+                        memcpy(black_point, black_save, sizeof(black_save));\
+                        memcpy(white_point, white_save, sizeof(white_save))
+
+
+
+
 
 extern int checkWinner(struct State, int currentColor, int x, int y);
 extern struct State* global_state;
@@ -45,9 +80,9 @@ static int depth, currentColor, alphaColor;
 static int black_minx, black_miny, black_maxx, black_maxy, white_minx, white_miny, white_maxx, white_maxy;//to restrict the region for searching
 static int black_tot, white_tot;
 static int white_point[ALIGNMENT][ALIGNMENT], black_point[ALIGNMENT][ALIGNMENT];// store the point for every coord
-static int lastPosX, lastPosY;
+extern int lastPosX, lastPosY;
 struct BinaryHeap* BH[MAX_DEPTH];
-
+static struct Vec2i best_choice;
 void initAI()
 {
     srand(time(NULL));
@@ -86,8 +121,6 @@ void endAI()
  * @note once a dangerous pattern is found I will terminate step 2.
  *       because if there is more than 2 dangerous patterns, then probably this state will lose...
  */
-
-
 int eval_white_form(int i, int j)
 {
     struct Cross cross = takeCross(global_state, i, j);
@@ -112,7 +145,7 @@ void estimate_black_form(int i, int j)
     {
         struct Cross cross = takeCross(global_state, i, j);
         PLACE_CROSS(cross, BLACK);
-        int two_cnt = countBlackTwo(cross);
+        int two_cnt = countBlackTwo(cross, i, j);
         black_point[i][j] += two_cnt * FORM_TWO;
         CLEAR_CROSS(cross);
     }
@@ -138,7 +171,7 @@ int eval_state()
     else return (max_black_val << 1) - max_white_val;
 }
 
-int dfs(int alpha, int beta)
+static inline void evaluate_all_moves()
 {
     //assume that the last move only affects a few places
     // 1. update the forbidden moves, note that while calculating update_valid
@@ -176,33 +209,35 @@ int dfs(int alpha, int beta)
     }
     if(currentColor == WHITE)
     {
-        for(int i = max(black_minx - 1, 0); i < min(black_maxx + 1, SIZE - 1); i++)
-            for (int j = max(black_minx - 1, 0); j < min(black_maxx + 1, SIZE - 1); j++)
+        for(int i = max(black_minx, 0); i < min(black_maxx, SIZE - 1); i++)
+            for (int j = max(black_minx, 0); j < min(black_maxx, SIZE - 1); j++)
                 if (GET(global_state, i, j) == BLACK)
                     if (destroyBlackLiveThree(i, j)) break;
-        for(int i = max(black_minx - 1, 0); i < min(black_maxx + 1, SIZE - 1); i++)
-            for (int j = max(black_minx - 1, 0); j < min(black_maxx + 1, SIZE - 1); j++)
+        for(int i = max(black_minx, 0); i < min(black_maxx, SIZE - 1); i++)
+            for (int j = max(black_minx, 0); j < min(black_maxx, SIZE - 1); j++)
                 if (GET(global_state, i, j) == BLACK)
                     if (destroyBlackFour(i, j)) break;
     }
     else
     {
         for(int i = max(white_minx, 0); i < min(white_maxx, SIZE - 1); i++)
-            for (int j = max(white_minx - 1, 0); j < min(white_maxx + 1, SIZE - 1); j++)
+            for (int j = max(white_minx, 0); j < min(white_maxx, SIZE - 1); j++)
                 if (GET(global_state, i, j) == WHITE)
                     if (destroyWhiteLiveThree(i, j)) break;
-        for(int i = max(white_minx - 1, 0); i < min(white_maxx + 1, SIZE - 1); i++)
-            for (int j = max(white_minx - 1, 0); j < min(white_maxx + 1, SIZE - 1); j++)
+        for(int i = max(white_minx, 0); i < min(white_maxx, SIZE - 1); i++)
+            for (int j = max(white_minx, 0); j < min(white_maxx, SIZE - 1); j++)
                 if (GET(global_state, i, j) == BLACK)
                     if (destroyWhiteFour(i, j)) break;
     }
+}
+
+int dfs(int alpha, int beta)
+{
+    evaluate_all_moves();
     if(depth == MAX_DEPTH)// 3. evaluate the state and return if reaching MAX_DEPTH
         return eval_state();
     else// 4. else we search the best moves based on the points of every place
     {
-        int black_save[ALIGNMENT][ALIGNMENT], white_save[ALIGNMENT][ALIGNMENT];
-        memcpy(black_save, black_point, sizeof(black_point));
-        memcpy(white_save, white_point, sizeof(white_point));
         clear(BH[depth]);
         for(int x = 0; x < SIZE; x++)
         {
@@ -218,48 +253,47 @@ int dfs(int alpha, int beta)
                 }
             }
         }
-        depth++;
+        BEFORE_SEARCH_CHILD;
         for(int i = 0; i < MAX_BRANCHES; i++)
         {
             struct HeapNode nd = top(BH[depth]);
             pop(BH[depth]);
             if(empty(BH[depth])) break;
-            lastPosX = nd.x;
-            lastPosY = nd.y;
-            PLACE(global_state, nd.x, nd.y, currentColor);
+            BEFORE_DFS(nd);
             if(currentColor == alphaColor)
             {
-                alpha = max(alpha, dfs(alpha, beta));
-                currentColor ^= 1;
+                if(depth == 0)
+                {
+                    int new_alpha = dfs(alpha, beta);
+                    if(new_alpha > alpha)
+                    {
+                        best_choice.x = nd.x;
+                        best_choice.y = nd.y;
+                    }
+                }
+                else alpha = max(alpha, dfs(alpha, beta));
+                AFTER_DFS(nd);
                 if(alpha > beta)//alpha-beta pruning
                 {
-                    CLEAR(global_state, nd.x, nd.y);
-                    depth--;
-                    memcpy(black_point, black_save, sizeof(black_save));
-                    memcpy(white_point, white_save, sizeof(white_save));
-                    currentColor ^= 1;
+                    BEFORE_RETURN;
                     return INF;
                 }
             }
             else
             {
-                currentColor ^= 1;
                 beta = min(beta, dfs(alpha, beta));
+                memcpy(black_point, black_save, sizeof(black_save));
+                memcpy(white_point, white_save, sizeof(white_save));
+                CLEAR(global_state, nd.x, nd.y);
+                RESTORE_ALL_MIN_MAX;
                 if(alpha > beta)
                 {
-                    CLEAR(global_state, nd.x, nd.y);
-                    depth--;
-                    memcpy(black_point, black_save, sizeof(black_save));
-                    memcpy(white_point, white_save, sizeof(white_save));
-                    currentColor ^= 1;
+                    BEFORE_RETURN;
                     return -INF;
                 }
             }
-            CLEAR(global_state, nd.x, nd.y);
-            memcpy(black_point, black_save, sizeof(black_save));
-            memcpy(white_point, white_save, sizeof(white_save));
         }
-        depth--;
+        BEFORE_RETURN;
     }
 }
 
@@ -267,7 +301,7 @@ void AIPlace(struct State* state, int color)
 {
     global_state = state;
     alphaColor = currentColor = color;
-    black_minx = black_miny = white_minx = white_miny = SIZE;
+    black_minx = black_miny = white_minx = white_miny = SIZE - 1;
     black_maxx = black_maxy = white_maxx = white_maxy = 0;
     for(int i = 0 ; i < SIZE ; i++)
         for(int j = 0; j < SIZE; j++)
@@ -298,6 +332,9 @@ void AIPlace(struct State* state, int color)
                 white_miny = j;
             }
     dfs(-INF, INF);
+    PLACE(state, best_choice.x, best_choice.y, currentColor);
+    lastPosX = best_choice.x;
+    lastPosY = best_choice.y;
 }
 
 #undef isEmpty
