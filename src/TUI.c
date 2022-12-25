@@ -11,7 +11,7 @@
                         tuiWidget->nxt = NULL;    \
                         tuiWidget->opt = NULL;    \
                         tuiWidget->center = true; \
-                        tuiWidget->nxtTUI = NULL;
+                        tuiWidget->nxtTUI = NULL
 static struct Cursor* cursor;
 struct TUIWidget* constructText(const char* content)
 {
@@ -95,7 +95,7 @@ void destructTUIWidget(struct TUIWidget* tuiWidget)
 {
     if(tuiWidget->type == OPTION)
     {
-        struct OptionEntry* optionEntry = tuiWidget->opt->nxt;
+        struct OptionEntry* optionEntry = tuiWidget->opt;
         while(optionEntry->prv != NULL) optionEntry = optionEntry->prv;
         while(optionEntry != NULL)
         {
