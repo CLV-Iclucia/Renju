@@ -11,7 +11,7 @@
 #define INVALID_INPUT_OUT_OF_RANGE 3
 #define INVALID_INPUT_OVERLAP 4
 #define MAX_LOG 256
-static int lastPosX, lastPosY;
+int lastPosX, lastPosY;
 static struct Vec2i log[MAX_LOG];
 static int log_ptr;
 
@@ -30,7 +30,8 @@ void drawBoard(const struct State *state)
             {
                 if (status == BLACK)printf("■");
                 if (status == WHITE)printf("□");
-            } else
+            }
+            else
             {
                 if (status == EMPTY)
                 {
@@ -39,18 +40,21 @@ void drawBoard(const struct State *state)
                         if (!j)printf("└");
                         else if (j < SIZE - 1)printf("┴");
                         else printf("┘");
-                    } else if (i < SIZE - 1)
+                    }
+                    else if (i < SIZE - 1)
                     {
                         if (!j)printf("├");
                         else if (j < SIZE - 1)printf("┼");
                         else printf("┤");
-                    } else
+                    }
+                    else
                     {
                         if (!j) printf("┌");
                         else if (j < SIZE - 1)printf("┬");
                         else printf("┐");
                     }
-                } else if (status == BLACK)printf("●");
+                }
+                else if (status == BLACK)printf("●");
                 else printf("◯");
             }
             if (j == SIZE - 1)putchar('\n');
@@ -196,18 +200,20 @@ void playerPlace(struct State *const state, const int currentColor)
  * @param AIColor
  * the color AI is using, enabled only when gameMode is set to PVE.
  */
-void gameLoop(const int gameMode, const int AIColor)
+void gameLoop(const int blackPlayer, const int whitePlayer)
 {
     struct State *state = constructState();
     lastPosX = -1, lastPosY = -1;
     int currentColor = BLACK;
     int ending = ENDING_NOT_END;
-    if (gameMode == GAME_MODE_PVE)initAI();
+    if (blackPlayer == AI || whitePlayer == AI)initAI();
     while (1)
     {
         clear_output();
         drawBoard(state);
-        if ((gameMode == GAME_MODE_PVE && currentColor == AIColor) || gameMode == GAME_MODE_PVP)
+        if((currentColor == BLACK && blackPlayer == AI) || (currentColor == WHITE && whitePlayer == AI))
+            AIPlace(state, currentColor);
+        else
         {
             printPrompt(currentColor);
             char ch = getchar_no_buf();
@@ -217,18 +223,20 @@ void gameLoop(const int gameMode, const int AIColor)
                 putchar(ch);
             }
             playerPlace(state, currentColor);
-        } else AIPlace(state, AIColor);
+        }
         if ((ending = checkWinner(state, currentColor, lastPosX, lastPosY)) != ENDING_NOT_END) break;
         currentColor ^= 1;
     }
-    if (gameMode == GAME_MODE_PVE)endAI();
+    if (blackPlayer == AI || whitePlayer == AI)endAI();
     if (ending == ENDING_BLACK_WIN)
     {
         printf("A black Renju is formed! Black wins!\n");
-    } else if (ending == ENDING_WHITE_WIN_RENJU)
+    }
+    else if (ending == ENDING_WHITE_WIN_RENJU)
     {
         printf("A white Renju is formed! White wins!\n");
-    } else if (ending == ENDING_WHITE_WIN_FORBID)
+    }
+    else if (ending == ENDING_WHITE_WIN_FORBID)
     {
         printf("A forbidden move is made! White wins!\n");
     }

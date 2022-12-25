@@ -5,14 +5,19 @@
  * @brief
  * this file will share many variables with GameAI.c to reduce the frequency of passing arguments
  */
-#include "GameCheck.h"
+#include "GameCheckAndCount.h"
 #include "GameCore.h"
 #include "DataStructure.h"
 #include <stdlib.h>
+#include <stdio.h>
+
 #define INSIDE(x,y) ((x) >= 0 && (y) >= 0 && (x) < SIZE && (y) < SIZE)
 #define STEP(x, step, dir) (x+(step)*(d##x[dir]))
 #define isEmpty(step) (!(local_l & (3 << ((idx + i + (step)) << 1))))
 #define PLACEABLE(step) (INSIDE(STEP(x, i + (step), k), STEP(y, i + (step), k)) && isEmpty(step))
+/**
+ * query the forbidden moves computed previously, recomputing forbidden moves at a small probability.
+ */
 #define BLACK_PLACEABLE(x, y) (rand() > RUSSIAN_ROULLETE ? is_placeable(x, y) : black_point[(x)][(y)] >= 0)
 #define BLACK_LONG_MASK 4095
 #define EBBBE 252//three black stones in a row, one possible situation for a live three
@@ -42,7 +47,7 @@ const int dy[] = {1, 0, 1, 1};
 struct State* global_state;// this is shared by ForbidCheck.c and GameAI.c
 extern const int INF;
 extern int white_point[][ALIGNMENT], black_point[][ALIGNMENT];
-const double PROBABILITY_RUSSIAN_ROULLETE = 0.05;
+const double PROBABILITY_RUSSIAN_ROULLETE = 0.05;//recompute forbidden moves at a probability of 0.05
 const int RUSSIAN_ROULLETE = (int)(32767 * PROBABILITY_RUSSIAN_ROULLETE);
 
 bool forbid(int x, int y);
@@ -63,7 +68,7 @@ bool is_placeable(int x, int y)
 /**
  * @note
  * All the magical numbers appeared below are accurately computed.
- * Of course, they can be compacted into functions.
+ * Of course, they can be compacted into smaller functions.
  * But given that this function will be called frequently, too many function calls might affect the speed
  * of the program.
  */
@@ -135,8 +140,8 @@ int checkLiveThree(int x, int y)
                         CLEAR_CROSS(cross_to_be_placed);
                         break;
                     }
-                    CLEAR_CROSS(cross_to_be_placed);
                 }
+                CLEAR_CROSS(cross_to_be_placed);
             }
             else if(checkGrids(local_l, idx + i, 6) == EBEBBE)
             {
@@ -252,7 +257,10 @@ bool forbid(int x, int y)
     if(checkFour(x, y) == 2) return true;
     return false;
 }
-
+/**
+ * compute forbidden moves and count live-threes and fours simultaneously.
+ * (x, y) must be empty
+ */
 void estimateBlackPoints(int x, int y)
 {
     PLACE(global_state, x, y, BLACK);
@@ -269,18 +277,22 @@ void estimateBlackPoints(int x, int y)
         {
             black_point[x][y] = cnt * FORM_LIVE_THREE;
             cnt = checkFour(x, y);
-            black_point[x][y] += cnt * FORM_FOUR;
+            if(cnt == 2) black_point[x][y] = -INF;
+            else black_point[x][y] += cnt * FORM_FOUR;
         }
     }
     CLEAR(global_state, x, y);
 }
-
 bool checkForbid(struct State* const state, int x, int y)
 {
     global_state = state;
     return forbid(x, y);
 }
-
+/**
+ * check the black live-three formed at (x, y)
+ * if find one, add the corresponding empty places with DESTROY_LIVE_THREE and return true
+ * else return false
+ */
 bool destroyBlackLiveThree(int x, int y)
 {
     struct Cross cross = takeCross(global_state, x, y);
@@ -294,7 +306,7 @@ bool destroyBlackLiveThree(int x, int y)
             {
                 struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i, k), STEP(y, i, k));
                 PLACE_CROSS(cross_to_be_placed, BLACK);
-                if(!forbid(STEP(x, i, k), STEP(y, i, k)))//can form a four at [idx + i - 1, idx + i + 2]
+                if(!forbid(STEP(x, i, k), STEP(y, i, k)))
                 {
                     if(PLACEABLE(-1))
                     {
@@ -302,22 +314,24 @@ bool destroyBlackLiveThree(int x, int y)
                            && BLACK_PLACEABLE(STEP(x, i + 4, k), STEP(y, i + 4, k)))
                         {
                             white_point[STEP(x, i, k)][STEP(y, i, k)] += DESTROY_LIVE_THREE;
+                            white_point[STEP(x, i, k)][STEP(y, i, k)] += DESTROY_LIVE_THREE;
                             CLEAR_CROSS(cross_to_be_placed);
                             return true;
                         }
                     }
                 }
                 CLEAR_CROSS(cross_to_be_placed);
-                cross_to_be_placed = takeCross(global_state, STEP(x, i + 3, k), STEP(y, i + 3, k));
+                cross_to_be_placed = takeCross(global_state, STEP(x, i + 4, k), STEP(y, i + 4, k));
                 PLACE_CROSS(cross_to_be_placed, BLACK);
-                if(!forbid(STEP(x, i + 3, k), STEP(y, i + 3, k)))
+                if(!forbid(STEP(x, i + 4, k), STEP(y, i + 4, k)))
                 {
-                    if(PLACEABLE(4))
+                    if(PLACEABLE(5))
                     {
-                        if(BLACK_PLACEABLE(STEP(x, i - 1, k), STEP(y, i - 1, k))
-                           && BLACK_PLACEABLE(STEP(x, i + 4, k), STEP(y, i + 4, k)))
+                        if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
+                           && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
                         {
-                            white_point[STEP(x, i + 3, k)][STEP(y, i + 3, k)] += DESTROY_LIVE_THREE;
+                            white_point[STEP(x, i, k)][STEP(y, i, k)] += DESTROY_LIVE_THREE;
+                            white_point[STEP(x, i + 4, k)][STEP(y, i + 4, k)] += DESTROY_LIVE_THREE;
                             CLEAR_CROSS(cross_to_be_placed);
                             return true;
                         }
@@ -332,17 +346,19 @@ bool destroyBlackLiveThree(int x, int y)
             {
                 struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i + 3, k), STEP(y, i + 3, k));
                 PLACE_CROSS(cross_to_be_placed, BLACK);
-                if(!forbid(STEP(x, i + 3, k), STEP(y, i + 3, k)))//can form a four at [idx + i + 1, idx + i + 4]
+                if(!forbid(STEP(x, i + 3, k), STEP(y, i + 3, k)))
                 {
                     if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
                        && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
                     {
+                        white_point[STEP(x, i, k)][STEP(y, i, k)] += DESTROY_LIVE_THREE;
                         white_point[STEP(x, i + 3, k)][STEP(y, i + 3, k)] += DESTROY_LIVE_THREE;
+                        white_point[STEP(x, i + 5, k)][STEP(y, i + 5, k)] += DESTROY_LIVE_THREE;
                         CLEAR_CROSS(cross_to_be_placed);
                         return true;
                     }
-                    CLEAR_CROSS(cross_to_be_placed);
                 }
+                CLEAR_CROSS(cross_to_be_placed);
             }
             else if(checkGrids(local_l, idx + i, 6) == EBEBBE)
             {
@@ -353,7 +369,9 @@ bool destroyBlackLiveThree(int x, int y)
                     if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
                        && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
                     {
+                        white_point[STEP(x, i, k)][STEP(y, i, k)] += DESTROY_LIVE_THREE;
                         white_point[STEP(x, i + 2, k)][STEP(y, i + 2, k)] += DESTROY_LIVE_THREE;
+                        white_point[STEP(x, i + 5, k)][STEP(y, i + 5, k)] += DESTROY_LIVE_THREE;
                         CLEAR_CROSS(cross_to_be_placed);
                         return true;
                     }
@@ -364,7 +382,11 @@ bool destroyBlackLiveThree(int x, int y)
     }
     return false;
 }
-
+/**
+ * check the black four formed at (x, y)
+ * if find one, add the corresponding empty places with DESTROY_FOUR and return true
+ * else return false
+ */
 bool destroyBlackFour(int x, int y)
 {
     struct Cross cross = takeCross(global_state, x, y);
@@ -417,6 +439,158 @@ bool destroyBlackFour(int x, int y)
         }
     }
     return false;
+}
+
+int countBlackLiveThree(struct Cross cross, int x, int y)
+{
+    int cnt = 0;
+    for(int k = 0; k < DIR_NUM; k++)
+    {
+        int local_l = *(cross.line[k]);
+        int idx = cross.idx[k];
+        bool find = false;
+        for(int i = max(-3, -idx); i <= min(-1, SIZE - 5 - idx); i++)
+        {
+            if(checkGrids(local_l, idx + i, 5) == EBBBE)//find a EBBBE at [idx + i, idx + i + 4]
+            {
+                struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i, k), STEP(y, i, k));
+                PLACE_CROSS(cross_to_be_placed, BLACK);
+                if(!forbid(STEP(x, i, k), STEP(y, i, k)))
+                {
+                    if(PLACEABLE(-1))
+                    {
+                        if(BLACK_PLACEABLE(STEP(x, i - 1, k), STEP(y, i - 1, k))
+                           && BLACK_PLACEABLE(STEP(x, i + 4, k), STEP(y, i + 4, k)))
+                        {
+                            find = true;
+                            CLEAR_CROSS(cross_to_be_placed);
+                            break;
+                        }
+                    }
+                }
+                CLEAR_CROSS(cross_to_be_placed);
+                cross_to_be_placed = takeCross(global_state, STEP(x, i + 4, k), STEP(y, i + 4, k));
+                PLACE_CROSS(cross_to_be_placed, BLACK);
+                if(!forbid(STEP(x, i + 4, k), STEP(y, i + 4, k)))
+                {
+                    if(PLACEABLE(5))
+                    {
+                        if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
+                           && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
+                        {
+                            find = true;
+                            CLEAR_CROSS(cross_to_be_placed);
+                            break;
+                        }
+                    }
+                }
+                CLEAR_CROSS(cross_to_be_placed);
+            }
+        }
+        if(find)
+        {
+            cnt++;
+            break;
+        }
+        for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
+        {
+            if(checkGrids(local_l, idx + i, 6) == EBBEBE)//find pattern EBBEBE at [i, i + 5]
+            {
+                struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i + 3, k), STEP(y, i + 3, k));
+                PLACE_CROSS(cross_to_be_placed, BLACK);
+                if(!forbid(STEP(x, i + 3, k), STEP(y, i + 3, k)))
+                {
+                    if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
+                       && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
+                    {
+                        find = true;
+                        CLEAR_CROSS(cross_to_be_placed);
+                        break;
+                    }
+                }
+                CLEAR_CROSS(cross_to_be_placed);
+            }
+            else if(checkGrids(local_l, idx + i, 6) == EBEBBE)
+            {
+                struct Cross cross_to_be_placed = takeCross(global_state, STEP(x, i + 2, k), STEP(y, i + 2, k));
+                PLACE_CROSS(cross_to_be_placed, BLACK);
+                if(!forbid(STEP(x, i + 2, k), STEP(y, i + 2, k)))//can form a four at [idx + i, idx + i + 3]
+                {
+                    if(BLACK_PLACEABLE(STEP(x, i, k), STEP(y, i, k))
+                       && BLACK_PLACEABLE(STEP(x, i + 5, k), STEP(y, i + 5, k)))
+                    {
+                        find = true;
+                        CLEAR_CROSS(cross_to_be_placed);
+                        break;
+                    }
+                }
+                CLEAR_CROSS(cross_to_be_placed);
+            }
+        }
+        if(find) cnt++;
+    }
+    return cnt;
+}
+
+int countBlackFour(struct Cross cross, int x, int y)
+{
+    int cnt = 0;
+    for(int k = 0; k < DIR_NUM; k++)
+    {
+        int local_l = *(cross.line[k]);
+        int idx = cross.idx[k];
+        bool find = false;
+        for(int i = max(-3, -idx); i <= min(0, SIZE - 4 - idx); i++)
+        {
+            if(checkGrids(local_l, idx + i, 4) == BBBB)//find a BBBB at [idx + i, idx + i + 3]
+            {
+                if(PLACEABLE(-1) && black_point[STEP(x, i - 1, k)][STEP(y, i - 1, k)] >= 0)
+                {
+                    find = true;
+                    break;
+                }
+                else if(PLACEABLE(4) && black_point[STEP(x, i + 4, k)][STEP(y, i + 4, k)] >= 0)
+                {
+                    find = true;
+                    break;
+                }
+            }
+        }
+        if(find)
+        {
+            cnt++;
+            break;
+        }
+        for(int i = max(-4, -idx); i <= min(0, SIZE - 5 - idx); i++)
+        {
+            if(checkGrids(local_l, idx + i, 5) == BEBBB)//find pattern BEBBB at [i, i + 4]
+            {
+                if(black_point[STEP(x, i + 1, k)][STEP(y, i + 1, k)] >= 0)
+                {
+                    find = true;
+                    break;
+                }
+            }
+            if(checkGrids(local_l, idx + i, 5) == BBEBB)
+            {
+                if(black_point[STEP(x, i + 2, k)][STEP(y, i + 2, k)] >= 0)
+                {
+                    find = true;
+                    break;
+                }
+            }
+            if(checkGrids(local_l, idx + i, 5) == BBBEB)
+            {
+                if(black_point[STEP(x, i + 3, k)][STEP(y, i + 3, k)] >= 0)
+                {
+                    find = true;
+                    break;
+                }
+            }
+        }
+        if(find) cnt++;
+    }
+    return cnt;
 }
 
 int countWhiteLiveThree(struct Cross cross)
@@ -533,19 +707,19 @@ int countWhiteTwo(struct Cross cross)
         int local_l = *(cross.line[k]);
         int idx = cross.idx[k];
         bool find = false;
-        for(int i = max(-2, -idx); i <= SIZE - 3 - idx; i++)
-        {
-            if(checkGrids(local_l, idx + i, 3) == WEW)
-            {
-                find = true;
-                break;
-            }
-        }
-        if(find)
-        {
-            cnt++;
-            break;
-        }
+//        for(int i = max(-2, -idx); i <= SIZE - 3 - idx; i++)
+//        {
+//            if(checkGrids(local_l, idx + i, 3) == WEW)
+//            {
+//                find = true;
+//                break;
+//            }
+//        }
+//        if(find)
+//        {
+//            cnt++;
+//            break;
+//        }
         for(int i = max(-1, -idx); i <= SIZE - 2 - idx; i++)
         {
             if(checkGrids(local_l, idx + i, 2) == WW)
@@ -649,20 +823,20 @@ int countBlackTwo(struct Cross cross, int x, int y)
         int local_l = *(cross.line[k]);
         int idx = cross.idx[k];
         bool find = false;
-        for(int i = max(-2, -idx); i <= SIZE - 3 - idx; i++)
-        {
-            if(checkGrids(local_l, idx + i, 3) == BEB && black_point[STEP(x, i + 1, k)][STEP(y, i + 1, k)] >= 0)
-            {
-                find = true;
-                break;
-            }
-        }
-        if(find)
-        {
-            cnt++;
-            break;
-        }
-        for(int i = max(-1, -idx); i <= SIZE - 2 - idx; i++)
+//        for(int i = max(-2, -idx); i <= min(0, SIZE - 3 - idx); i++)
+//        {
+//            if(checkGrids(local_l, idx + i, 3) == BEB && black_point[STEP(x, i + 1, k)][STEP(y, i + 1, k)] >= 0)
+//            {
+//                find = true;
+//                break;
+//            }
+//        }
+//        if(find)
+//        {
+//            cnt++;
+//            break;
+//        }
+        for(int i = max(-1, -idx); i <= min(0, SIZE - 2 - idx); i++)
         {
             if(checkGrids(local_l, idx + i, 2) == BB)
             {

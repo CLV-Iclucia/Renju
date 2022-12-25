@@ -20,23 +20,31 @@
 #define CHOOSE_OPTION 2
 
 struct TUIManager;
+/**
+ * There are 3 kinds of TUIWidgets: Image, Text and Option
+ * Image cannot be chosen, the other two can.
+ * They are stored in TUIManager as a doubly-linked list.
+ */
 struct TUIWidget
 {
     DOUBLY_LINKED_LIST(struct TUIWidget);
     struct OptionEntry *opt;///< enabled if and only if type=OPTION
     char **image;///< enabled if and only if type=IMAGE
-    char *text;///< enabled if and only if type=TEXT
+    char *text;///< enabled if and only if type=TEXT or OPTION
     struct TUIManager* nxtTUI;///< enabled if and only if type=TEXT. Points to the TUI to be triggered when triggered.
     int width, height;///< the width and height of the image
-    enum TYPE{TEXT = 0, OPTION, IMAGE} type;
-    bool center;
+    enum TYPE{TEXT = 0, OPTION, IMAGE} type;///< the type of this widget
+    bool center;///< whether the widget is at the center of the screen.
 };
 
+/**
+ * describes an entry of an Option TUIWidget, also stored as doubly-linked list
+ */
 struct OptionEntry
 {
     char str[ENTRY_MAX_LENGTH];
     DOUBLY_LINKED_LIST(struct OptionEntry);
-    int n;
+    int n;///< length of str
 };
 
 struct OptionEntry* constructOptionEntry(const char* str);

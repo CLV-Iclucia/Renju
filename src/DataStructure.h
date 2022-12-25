@@ -3,6 +3,8 @@
 //
 #ifndef RENJU_DATASTRUCTURE_H
 #define RENJU_DATASTRUCTURE_H
+
+#include <string.h>
 #include "utils.h"
 #define SIZE 15
 #define DOUBLY_LINKED_LIST(TYPE) TYPE *prv, *nxt
@@ -38,7 +40,7 @@ struct HeapNode
  */
 struct BinaryHeap
 {
-    struct HeapNode hp[MAX_HEAPSIZE];
+    struct HeapNode hp[MAX_HEAPSIZE + 1];
     int sz;
 };
 static inline void clear(struct BinaryHeap *H) { H->sz = 0; }
@@ -46,7 +48,7 @@ static inline bool empty(struct BinaryHeap *H) { return !(H->sz); }
 static inline struct HeapNode top(struct BinaryHeap *H) { return H->hp[1]; }
 static void up(struct BinaryHeap *H, int o)
 {
-    while(H->hp[o].val >= H->hp[o >> 1].val && o)
+    while(H->hp[o].val >= H->hp[o >> 1].val && o >= 2)
     {
         swap(struct HeapNode, H->hp[o], H->hp[o >> 1]);
         o >>= 1;
@@ -81,22 +83,14 @@ static void down(struct BinaryHeap *H, int o)
 
 static inline void insert(struct BinaryHeap *H, int x, int y, int val)
 {
-    /*if(H->sz == MAX_HEAPSIZE)
-    {
-        printf("Error: Binary heap is full, cannot insert new node.\n");
-        return ;
-    }*/
+    assert(H->sz <= MAX_HEAPSIZE);
     H->hp[++(H->sz)] = (struct HeapNode){x, y, val};
     up(H, H->sz);
 }
 
 static inline void pop(struct BinaryHeap *H)
 {
-    /*if(!(H->sz))
-    {
-        printf("Error: Binary heap is empty, cannot pop.\n");
-        return ;
-    }*/
+    assert(H->sz);
     swap(struct HeapNode, H->hp[1], H->hp[H->sz]);
     H->sz--;
     down(H, 1);

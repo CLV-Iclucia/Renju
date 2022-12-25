@@ -68,7 +68,9 @@ struct OptionEntry *constructOptionEntry(const char *str)
     optionEntry->prv = optionEntry->nxt = NULL;
     return optionEntry;
 }
-
+/**
+ * add an option entry to an Option Widget instance
+ */
 void addOptionEntry(struct TUIWidget* tuiWidget, struct OptionEntry* opt)
 {
     if(tuiWidget->type != OPTION)
@@ -210,7 +212,10 @@ bool processControlSignal(struct TUIManager *tuiManager, int controlSignal)
     }
     return false;
 }
-
+/**
+ * render a Text TUIWidget based on an instance.
+ * Because Text TUIWidget can be chosen, cursor also need to be considered when rendering it.
+ */
 static void renderText(struct TUIWidget* tuiWidget, bool chosen)
 {
     if(chosen)
@@ -234,7 +239,10 @@ static void renderText(struct TUIWidget* tuiWidget, bool chosen)
         printf("%s\n", tuiWidget->text);
     }
 }
-
+/**
+ * render an Image TUIWidget based on an instance.
+ * Because Image TUIWidget can be chosen, cursor also need to be considered when rendering it.
+ */
 static void renderImage(struct TUIWidget *tuiWidget)
 {
     for(int i = 0; i < tuiWidget->width; i++)
@@ -244,7 +252,10 @@ static void renderImage(struct TUIWidget *tuiWidget)
         printf("%s\n", tuiWidget->image[i]);
     }
 }
-
+/**
+ * render an Option TUIWidget based on an instance.
+ * Because Option TUIWidget can be chosen, cursor also need to be considered when rendering it.
+ */
 static void renderOption(struct TUIWidget *tuiWidget, bool chosen)
 {
     if(chosen)
@@ -272,6 +283,9 @@ static void renderOption(struct TUIWidget *tuiWidget, bool chosen)
 void setCursor(struct Cursor* pCursor){ cursor = pCursor; }
 void resetCursor(){ cursor = NULL; }
 
+/**
+ * render the screen based on a TUIManager instance. All the widgets in this instance will be rendered
+ */
 void render(struct TUIManager* tuiManager)
 {
     clear_output();
@@ -285,6 +299,9 @@ void render(struct TUIManager* tuiManager)
     }
 }
 
+/**
+ * render the screen based on a TUIManager instance and interact with the instance
+ */
 void TUI(struct TUIManager* tuiManager)
 {
     while(1)

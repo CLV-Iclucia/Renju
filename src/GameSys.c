@@ -7,7 +7,7 @@
 #include "GameSys.h"
 /**
  *  read from metadata to start the game.
- *  if it fails, then exit.
+ *  if it fails, then return.
  */
 void read_meta()
 {

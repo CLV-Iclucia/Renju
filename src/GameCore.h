@@ -6,6 +6,7 @@
 #define RENJU_GAMECORE_H
 
 #include <stdbool.h>
+#include <assert.h>
 #include "utils.h"
 #define EMPTY 0
 #define WHITE 2
@@ -22,9 +23,9 @@
 #define DIAG_R 3
 //assign points for different targets
 //how to calc the point for one move: if one move achieves certain following targets then add the corresponding points
-#define FORM_RENJU (1 << 12)
-#define DESTROY_FOUR (1 << 8)
-#define FORM_FOUR (1 << 7)
+#define FORM_RENJU (1 << 16)
+#define DESTROY_FOUR (1 << 7)
+#define FORM_FOUR (1 << 5)
 #define DESTROY_LIVE_THREE (1 << 4)
 #define FORM_LIVE_THREE (1 << 2)
 #define FORM_TWO 1
@@ -51,17 +52,27 @@ struct State
     int row[ALIGNMENT];
     int col[ALIGNMENT];
 };
-
+/**
+ * Cross describes four lines crossing at a coordinates.
+ * the indices of the coordinates are stored in four directions.
+ * ANY modification to a Cross instance will infect the state it was taken from.
+ */
 struct Cross
 {
     int *line[DIR_NUM], idx[DIR_NUM];
 };
 
 struct State* constructState();
+/**
+ * get the status of (i, j) on the board.
+ */
 static inline int GET(const struct State* state, int i, int j)
 {
     return (state->row[i] >> (j << 1)) & 3;
 }
+/**
+ * take the cross at (i, j) on the board.
+ */
 static inline struct Cross takeCross(const struct State* state, int i, int j)
 {
     struct Cross cross;
@@ -97,6 +108,9 @@ static inline struct Cross takeCross(const struct State* state, int i, int j)
     return cross;
 #endif
 }
+/**
+ * place a stone of a certain color on (i, j) of the board.
+ */
 static inline void PLACE(struct State* const state, int i, int j, int color)
 {
     state->row[i] |= (color << (j << 1));
@@ -112,19 +126,25 @@ static inline void PLACE(struct State* const state, int i, int j, int color)
     else state->diagRD[i + j - SIZE + 1] |= (color << ((SIZE - 1 - i) << 1));
 #endif
 }
-
+/**
+ * place a stone of a certain color on the coordinate defined by a Cross instance
+ */
 static inline void PLACE_CROSS(struct Cross cross, int color)
 {
     for(int i = 0; i < DIR_NUM; i++)
         *(cross.line[i]) |= (color << (cross.idx[i] << 1));
 }
-
+/**
+ * place a stone of a certain color on the coordinate defined by a Cross instance
+ */
 static inline void CLEAR_CROSS(struct Cross cross)
 {
     for(int i = 0; i < DIR_NUM; i++)
         *(cross.line[i]) &= ~(3 << (cross.idx[i] << 1));
 }
-
+/**
+ * clear a grid on the board.
+ */
 static inline void CLEAR(struct State* const state, int i, int j)
 {
     state->row[i] &= ~(3 << (j << 1));

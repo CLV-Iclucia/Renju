@@ -21,12 +21,18 @@ static struct TUIManager *loadScreenManager, *SettingsScreenManager, *AboutScree
 static char* buf[MAX_IMAGE_SIZE];
 static struct Cursor* cursor;
 struct TUIManager* titleScreenManager;
-struct Entry
+struct Entry//corresponding to an entry in meta data
 {
     char name[ENTRY_MAX_LENGTH];
     char value[ENTRY_MAX_LENGTH];
-    int n_value;
+    int n_value;///< length of string value
 };
+/**
+ * a constructor for Entry
+ * @param meta_entry a string in the format of name:value
+ * @return
+ *      a corresponding Entry instance
+ */
 struct Entry* constructEntry(const char *meta_entry)
 {
     struct Entry* entry = (struct Entry*)malloc(sizeof(struct Entry));
@@ -45,6 +51,9 @@ struct Entry* constructEntry(const char *meta_entry)
     return entry;
 }
 
+/**
+ * read the theme file to get the images
+ */
 struct TUIWidget* initThemeImage(FILE* fp)
 {
     int height = read_num(fp);
@@ -57,6 +66,9 @@ struct TUIWidget* initThemeImage(FILE* fp)
     return constructImage(width, height, buf);
 }
 
+/**
+ * read the theme file to get the style of cursor
+ */
 struct Cursor* initThemeCursor(FILE* fp)
 {
     struct Cursor* new_cursor = (struct Cursor*) malloc(sizeof(struct Cursor));
@@ -67,6 +79,9 @@ struct Cursor* initThemeCursor(FILE* fp)
     return new_cursor;
 }
 
+/**
+ * Initialize theme for the TUI of the game.
+ */
 void initTheme(const char* path)
 {
     FILE* fp = fopen(path, "r");
@@ -102,6 +117,9 @@ void initTitleScreen()
     titleScreenManager->cur = titleScreenManager->head;
 }
 
+/**
+ * initialize the meta data of the game, including theme, savings and TUIManagers and so on.
+ */
 void initGame()
 {
     FILE* fp = fopen("../assets/meta", "r");
@@ -147,6 +165,9 @@ void initAboutScreen()
 }
 #define HUMAN 1
 #define AI 0
+/**
+ * triggered when GameManager is confirmed. Start a new game.
+ */
 static void confirm_game(struct TUIManager* GameManager)
 {
     int black_player = -1;
@@ -165,15 +186,7 @@ static void confirm_game(struct TUIManager* GameManager)
         }
     }
     if(black_player >= 0 && white_player >= 0)
-    {
-        if(black_player == HUMAN && white_player == HUMAN)
-            gameLoop(GAME_MODE_PVP, -1);
-        else if(black_player == HUMAN && white_player == AI)
-            gameLoop(GAME_MODE_PVE, WHITE);
-        else if(black_player == AI && white_player == HUMAN)
-            gameLoop(GAME_MODE_PVE, BLACK);
-        else printf("Error: EVE game haven't been supported yet.\n");
-    }
+        gameLoop(black_player, white_player);
 }
 #undef HUMAN
 #undef AI
@@ -199,6 +212,10 @@ void initSettingScreen()
 {
 
 }
+
+/**
+ * Called when the game ended. Destruct the UI.
+ */
 void clean()
 {
     destructTUIManager(titleScreenManager);
@@ -210,7 +227,9 @@ void clean()
         free(buf[i]);
     DELETE(cursor);
 }
-
+/**
+ * Initialize the game info and various TUIManagers.
+ */
 void init()
 {
     initGame();

@@ -8,7 +8,10 @@
 #else
 #include <termio.h>
 #endif
-// start from index p and read a non-negative integer from str
+/**
+ * start from index p and read a non-negative integer from str
+ */
+
 int stringstream(const char* str, int* p)
 {
     int ret = 0;
@@ -22,7 +25,9 @@ int stringstream(const char* str, int* p)
     return ret;
 }
 
-//a safer input function, because not all compilers support scanf_s so DIY is better.
+/**
+ *a safer input function, because not all compilers support scanf_s so DIY is better.
+ */
 int getLine(char* str, int n)
 {
     int tot_input;
@@ -39,7 +44,9 @@ int getLine(char* str, int n)
     str[n] = 0;
     return tot_input + 1;
 }
-
+/**
+ * same as getLine but for file I/O.
+ */
 int fgetLine(FILE* fp, char* str, int n)
 {
     int tot_input;
@@ -60,7 +67,9 @@ int fgetLine(FILE* fp, char* str, int n)
     str[n] = 0;
     return tot_input + 1;
 }
-
+/**
+ * clear the screen.
+ */
 void clear_output()
 {
 #ifdef IS_LINUX
@@ -86,7 +95,9 @@ char getchar_crossplatform()
     return c == '\n';
 #endif
 }
-
+/**
+ * getchar without buffer.
+ */
 char getchar_no_buf()
 {
 #ifdef IS_WINDOWS
