@@ -260,21 +260,6 @@ static inline void evaluate_all_moves()
 int dfs(int alpha, int beta)
 {
     evaluate_all_moves();
-    if(depth == 0)
-    {
-        if(currentColor == WHITE)
-        {
-            for(int i = SIZE - 1; i >= 0; i--, putchar('\n'))
-                for(int j = 0; j <= SIZE - 1; j++)
-                    printf("%d ", white_point[i][j]);
-        }
-        else
-        {
-            for(int i = SIZE - 1; i >= 0; i--, putchar('\n'))
-                for(int j = 0; j <= SIZE - 1; j++)
-                    printf("%d ", black_point[i][j]);
-        }
-    }
     BEFORE_SEARCH_CHILD;
     if(currentColor == WHITE)
     {

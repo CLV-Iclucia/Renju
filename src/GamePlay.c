@@ -211,6 +211,7 @@ void gameLoop(const int blackPlayer, const int whitePlayer)
     {
         clear_output();
         drawBoard(state);
+        if ((ending = checkWinner(state, currentColor, lastPosX, lastPosY)) != ENDING_NOT_END) break;
         if((currentColor == BLACK && blackPlayer == AI) || (currentColor == WHITE && whitePlayer == AI))
             AIPlace(state, currentColor);
         else
@@ -224,7 +225,6 @@ void gameLoop(const int blackPlayer, const int whitePlayer)
             }
             playerPlace(state, currentColor);
         }
-        if ((ending = checkWinner(state, currentColor, lastPosX, lastPosY)) != ENDING_NOT_END) break;
         currentColor ^= 1;
     }
     if (blackPlayer == AI || whitePlayer == AI)endAI();
