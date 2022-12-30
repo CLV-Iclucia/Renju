@@ -7,8 +7,9 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-#define MAX_BRANCHES 5//at each layer search at most 3 choices.
+#define MAX_BRANCHES 3//at each layer search at most 3 choices.
 
 #define update_valid(x_min, x_max, y_min, y_max) {for(int i = x_min; i <= x_max; i++) \
                                                     for(int j = y_min; j <= y_max; j++) \
@@ -33,12 +34,12 @@
 
 #define BEFORE_SEARCH_CHILD        int black_save[ALIGNMENT][ALIGNMENT], white_save[ALIGNMENT][ALIGNMENT]; \
                                     int tmpLastPosX = lastPosX;    \
-                                    int tmpLastPosY = lastPosY;    \
+                                    int tmpLastPosY = lastPosY;                                            \
                                     memcpy(black_save, black_point, sizeof(black_point));\
-                                    memcpy(white_save, white_point, sizeof(white_point))
+                                    memcpy(white_save, white_point, sizeof(white_point))               \
+
 
 #define BEFORE_DFS(nd) depth++; \
-                    int tmp = global_state->row[8];            \
                     lastPosX = nd.x;   \
                      int black_save_minx = black_minx, black_save_miny = black_miny, black_save_maxx = black_maxx, \
                      black_save_maxy = black_maxy, white_save_minx = white_minx, white_save_miny = white_miny,     \
@@ -48,18 +49,18 @@
                     currentColor ^= 1;           \
                     UPDATE_ALL_MIN_MAX(nd)
 
+
 #define AFTER_DFS(nd)   CLEAR(global_state, nd.x, nd.y);\
-                        assert(tmp == global_state->row[8]);                   \
                         depth--; \
                         currentColor ^= 1; \
                         RESTORE_ALL_MIN_MAX
 
-#define BEFORE_RETURN    lastPosX = tmpLastPosX; \
+#define BEFORE_RETURN   lastPosX = tmpLastPosX; \
                          lastPosY = tmpLastPosY;  \
                         memcpy(black_point, black_save, sizeof(black_save));\
                         memcpy(white_point, white_save, sizeof(white_save));
 
-#define MAX_ROUND 4// searching six rounds
+#define MAX_ROUND 6// searching six rounds
 
 #define MAX_DEPTH (MAX_ROUND << 1)//if we reach MAX_DEPTH we'll evaluate the state and return
 
@@ -136,7 +137,7 @@ void estimate_white_form(int i, int j)
     struct Cross cross = takeCross(global_state, i, j);
     PLACE_CROSS(cross, WHITE);
     white_point[i][j] = eval_white_form(i, j);
-    if(i >= 3 && i <= 12 && j >= 3 && j <= 12)white_point[i][j]++;
+    if(i >= 3 && i <= 10 && j >= 3 && j <= 10)white_point[i][j]++;
     CLEAR_CROSS(cross);
 }
 
@@ -151,7 +152,6 @@ void eval_black_form(int i, int j)
         int four_cnt = countBlackFour(cross, i, j);
         int two_cnt = countBlackTwo(cross, i, j);
         black_point[i][j] = live_three_cnt * FORM_LIVE_THREE + four_cnt * FORM_FOUR + two_cnt * FORM_TWO;
-        if(i >= 3 && i <= 12 && j >= 3 && j <= 12) black_point[i][j]++;
     }
 }
 
@@ -163,7 +163,7 @@ void estimate_black_form(int i, int j)
         PLACE_CROSS(cross, BLACK);
         int two_cnt = countBlackTwo(cross, i, j);
         black_point[i][j] += two_cnt * FORM_TWO;
-        if(i >= 3 && i <= 12 && j >= 3 && j <= 12)black_point[i][j]++;
+        if(i >= 3 && i <= 10 && j >= 3 && j <= 10)black_point[i][j]++;
         CLEAR_CROSS(cross);
     }
 }
@@ -203,12 +203,11 @@ static inline void evaluate_all_moves()
     // 1. update the forbidden moves, note that while calculating update_valid
     //     some of the black points are already calculated
     if(rand() <= RUSSIAN_ROULLETE)
-        {
-            update_valid(max(0, lastPosX - 4), min(SIZE - 1, lastPosX + 4),
-                         max(0, lastPosY - 4), min(SIZE - 1, lastPosY + 4));
-        }
-        else update_valid(0, SIZE - 1, 0, SIZE - 1);
-
+    {
+        update_valid(max(0, lastPosX - 4), min(SIZE - 1, lastPosX + 4),
+                     max(0, lastPosY - 4), min(SIZE - 1, lastPosY + 4));
+    }
+    else update_valid(0, SIZE - 1, 0, SIZE - 1);
     // 2. calculate the points for every empty place
     if(rand() <= RUSSIAN_ROULLETE)
     {
@@ -236,64 +235,68 @@ static inline void evaluate_all_moves()
     }
     if(currentColor == WHITE)
     {
-        for(int i = max(black_minx, 0); i <= min(black_maxx, SIZE - 1); i++)
-            for (int j = max(black_minx, 0); j <= min(black_maxx, SIZE - 1); j++)
-                if (GET(global_state, i, j) == BLACK)
-                    if (destroyBlackLiveThree(i, j)) break;
-        for(int i = max(black_minx, 0); i <= min(black_maxx, SIZE - 1); i++)
-            for (int j = max(black_minx, 0); j <= min(black_maxx, SIZE - 1); j++)
-                if (GET(global_state, i, j) == BLACK)
-                    if (destroyBlackFour(i, j)) break;
+        for(int i = min(0, black_minx); i <= max(SIZE - 1, black_maxx); i++)
+            for(int j = min(0, black_miny); j <= max(SIZE - 1, black_maxy); j++)
+                if(GET(global_state, i, j) == BLACK)
+                    if(destroyBlackFour(i, j)) return ;
+        for(int i = min(0, black_minx); i <= max(SIZE - 1, black_maxx); i++)
+            for(int j = min(0, black_miny); j <= max(SIZE - 1, black_maxy); j++)
+                if(GET(global_state, i, j) == BLACK)
+                    if(destroyBlackLiveThree(i, j)) return ;
     }
     else
     {
-        for(int i = max(white_minx, 0); i < min(white_maxx, SIZE - 1); i++)
-            for (int j = max(white_minx, 0); j < min(white_maxx, SIZE - 1); j++)
-                if (GET(global_state, i, j) == WHITE)
-                    if (destroyWhiteLiveThree(i, j)) break;
-        for(int i = max(white_minx, 0); i < min(white_maxx, SIZE - 1); i++)
-            for (int j = max(white_minx, 0); j < min(white_maxx, SIZE - 1); j++)
-                if (GET(global_state, i, j) == BLACK)
-                    if (destroyWhiteFour(i, j)) break;
+        for(int i = min(0, white_minx); i <= max(SIZE - 1, white_maxx); i++)
+            for(int j = min(0, white_miny); j <= max(SIZE - 1, white_maxy); j++)
+                if(GET(global_state, i, j) == WHITE)
+                    if(destroyWhiteFour(i, j)) return ;
+        for(int i = min(0, white_minx); i <= max(SIZE - 1, white_maxx); i++)
+            for(int j = min(0, white_miny); j <= max(SIZE - 1, white_maxy); j++)
+                if(GET(global_state, i, j) == WHITE)
+                    if(destroyWhiteLiveThree(i, j)) return ;
     }
 }
 
 int dfs(int alpha, int beta)
 {
-    //printf("%d\n", depth);
-    //drawBoard(global_state);
     evaluate_all_moves();
-    BEFORE_SEARCH_CHILD;
-    for(int i = 0; i < SIZE; i++)
-        for(int j = 0; j < SIZE ; j++)
+    if(depth == 0)
+    {
+        if(currentColor == WHITE)
         {
-            if(GET(global_state, i, j) == BLACK)
-            {
-                if(searchPatternAroundPoint(global_state, i, j, RENJU_LENGTH, BLACK_RENJU_MASK))
-                {
-                    BEFORE_RETURN;
-                    if(currentColor == alphaColor && currentColor == WHITE) return -INF;
-                    if(currentColor == alphaColor && currentColor == BLACK) return INF;
-                    if(currentColor != alphaColor && currentColor == BLACK) return INF;
-                    if(currentColor != alphaColor && currentColor == WHITE) return -INF;
-                }
-            }
-            if(GET(global_state, i, j) == WHITE)
-            {
-                if(searchPatternAroundPoint(global_state, i, j, RENJU_LENGTH, WHITE_RENJU_MASK))
-                {
-                    BEFORE_RETURN;
-                    if(currentColor == alphaColor && currentColor == BLACK) return -INF;
-                    if(currentColor == alphaColor && currentColor == WHITE) return INF;
-                    if(currentColor != alphaColor && currentColor == WHITE) return INF;
-                    if(currentColor != alphaColor && currentColor == BLACK) return -INF;
-                }
-            }
+            for(int i = SIZE - 1; i >= 0; i--, putchar('\n'))
+                for(int j = 0; j <= SIZE - 1; j++)
+                    printf("%d ", white_point[i][j]);
         }
+        else
+        {
+            for(int i = SIZE - 1; i >= 0; i--, putchar('\n'))
+                for(int j = 0; j <= SIZE - 1; j++)
+                    printf("%d ", black_point[i][j]);
+        }
+    }
+    BEFORE_SEARCH_CHILD;
+    if(currentColor == WHITE)
+    {
+        if(searchPatternAroundPoint(global_state, lastPosX, lastPosY, RENJU_LENGTH, BLACK_RENJU_MASK))
+        {
+            BEFORE_RETURN;
+            if(alphaColor == WHITE) return -INF;
+            else return INF;
+        }
+    }
+    if(currentColor == BLACK)
+    {
+        if (searchPatternAroundPoint(global_state, lastPosX, lastPosY, RENJU_LENGTH, WHITE_RENJU_MASK))
+        {
+            BEFORE_RETURN;
+            if (alphaColor == BLACK) return -INF;
+            else return INF;
+        }
+    }
     if(depth == MAX_DEPTH)
     {
         BEFORE_RETURN;
-        //drawBoard(global_state);
         int cnt = eval_state();
         return cnt;// 3. evaluate the state and return if reaching MAX_DEPTH
     }
@@ -378,25 +381,19 @@ void AIPlace(struct State* state, int color)
         for(int j = 0; j < SIZE; j++)
             if(GET(global_state, i, j) == BLACK)
             {
-                black_maxx = i;
-                black_maxy = j;
+                black_maxx = max(black_maxx, i);
+                black_maxy = max(black_maxy, j);
+                black_minx = min(black_minx, i);
+                black_miny = min(black_miny, j);
             }
-            else if(GET(global_state, i, j) == WHITE)
+    for(int i = 0; i <= SIZE - 1; i++)
+        for(int j = 0; j <= SIZE - 1; j++)
+            if(GET(global_state, i, j) == WHITE)
             {
-                white_maxx = i;
-                white_maxy = j;
-            }
-    for(int i = SIZE - 1; i >= 0; i--)
-        for(int j = SIZE - 1; j >= 0; j--)
-            if(GET(global_state, i, j) == BLACK)
-            {
-                black_minx = i;
-                black_miny = j;
-            }
-            else if(GET(global_state, i, j) == WHITE)
-            {
-                white_minx = i;
-                white_miny = j;
+                white_maxx = max(white_maxx, i);
+                white_maxy = max(white_maxy, j);
+                white_minx = min(white_minx, i);
+                white_miny = min(white_miny, j);
             }
     depth = 0;
     dfs(-INF, INF);
