@@ -60,7 +60,7 @@
                         memcpy(black_point, black_save, sizeof(black_save));\
                         memcpy(white_point, white_save, sizeof(white_save));
 
-#define MAX_ROUND 6// searching six rounds
+#define MAX_ROUND 4// searching six rounds
 
 #define MAX_DEPTH (MAX_ROUND << 1)//if we reach MAX_DEPTH we'll evaluate the state and return
 
@@ -80,6 +80,7 @@ static int black_minx = SIZE - 1, black_miny = SIZE - 1, black_maxx = 0, black_m
 static int black_tot, white_tot;
 int white_point[ALIGNMENT][ALIGNMENT], black_point[ALIGNMENT][ALIGNMENT];// store the point for every coord
 extern int lastPosX, lastPosY;
+static int max_depth;
 static struct BinaryHeap* BH[MAX_DEPTH];
 static struct Vec2i best_choice;
 void initAI()
@@ -92,6 +93,8 @@ void initAI()
     }
     memset(white_point, 0, sizeof(white_point));
     memset(black_point, 0, sizeof(black_point));
+    max_depth = 1;
+    round = 0;
 }
 
 void endAI()
@@ -152,6 +155,7 @@ void eval_black_form(int i, int j)
         int four_cnt = countBlackFour(cross, i, j);
         int two_cnt = countBlackTwo(cross, i, j);
         black_point[i][j] = live_three_cnt * FORM_LIVE_THREE + four_cnt * FORM_FOUR + two_cnt * FORM_TWO;
+        if(i >= 3 && i <= 10 && j >= 3 && j <= 10)black_point[i][j]++;
     }
 }
 
@@ -176,11 +180,11 @@ void estimate_black_form(int i, int j)
 int eval_state()
 {
     for(int i = white_minx; i <= white_maxx; i++)
-        for (int j = white_minx; j <= white_maxx; j++)
+        for (int j = white_miny; j <= white_maxy; j++)
             if (GET(global_state, i, j) == WHITE)
                 white_point[i][j] = eval_white_form(i, j);
     for(int i = black_minx; i <= black_maxx; i++)
-        for (int j = black_minx; j <= black_maxx; j++)
+        for (int j = black_miny; j <= black_maxy; j++)
             if (GET(global_state, i, j) == BLACK)
                 eval_black_form(i, j);
     int max_white_val = -INF, max_black_val = -INF;
@@ -216,8 +220,8 @@ static inline void evaluate_all_moves()
             {
                 if(GET(global_state, i, j) == EMPTY)
                 {
-                    if(currentColor == WHITE) estimate_white_form(i, j);
-                    else estimate_black_form(i, j);
+                    estimate_white_form(i, j);
+                    estimate_black_form(i, j);
                 }
             }
     }
@@ -228,8 +232,8 @@ static inline void evaluate_all_moves()
             {
                 if(GET(global_state, i, j) == EMPTY)
                 {
-                    if(currentColor == WHITE) estimate_white_form(i, j);
-                    else estimate_black_form(i, j);
+                    estimate_white_form(i, j);
+                    estimate_black_form(i, j);
                 }
             }
     }
@@ -260,6 +264,12 @@ static inline void evaluate_all_moves()
 int dfs(int alpha, int beta)
 {
     evaluate_all_moves();
+//    if(depth == 0)
+//    {
+//        for(int i = SIZE - 1; i >= 0; i--, putchar('\n'))
+//            for(int j = 0; j <= SIZE - 1; j++)
+//                printf("%d ", black_point[i][j] + white_point[i][j]);
+//    }
     BEFORE_SEARCH_CHILD;
     if(currentColor == WHITE)
     {
@@ -279,7 +289,7 @@ int dfs(int alpha, int beta)
             else return INF;
         }
     }
-    if(depth == MAX_DEPTH)
+    if(depth == max_depth)
     {
         BEFORE_RETURN;
         int cnt = eval_state();
@@ -296,15 +306,32 @@ int dfs(int alpha, int beta)
                 {
                     if(currentColor == BLACK)
                     {
-                        if(black_point[x][y] >= 0)insert(BH[depth], x, y, black_point[x][y]);
+                        if(black_point[x][y] >= 0)
+                        {
+                            if(black_point[x][y] == FORM_RENJU)insert(BH[depth], x, y, black_point[x][y] << 1);
+                            else insert(BH[depth], x, y, (black_point[x][y] << 1) + white_point[x][y]);
+                        }
                     }
-                    else insert(BH[depth], x, y, white_point[x][y]);
+                    else
+                    {
+                        if(white_point[x][y] >= 0)
+                        {
+                            if(white_point[x][y] == FORM_RENJU)insert(BH[depth], x, y, white_point[x][y] << 1);
+                            else
+                            {
+                                if(black_point[x][y] >= 0)
+                                    insert(BH[depth], x, y, (white_point[x][y] << 1) + black_point[x][y]);
+                                else insert(BH[depth], x, y, (white_point[x][y] << 1));
+                            }
+                        }
+                    }
                 }
             }
         }
         int best_alpha = -INF;
         for(int i = 0; i < MAX_BRANCHES; i++)
         {
+            if(empty(BH[depth]))break;
             struct HeapNode nd = top(BH[depth]);
             pop(BH[depth]);
             if(currentColor == alphaColor)
@@ -358,6 +385,7 @@ void AIPlace(struct State* state, int color)
     best_choice.x = -1;
     global_state = state;
     alphaColor = currentColor = color;
+    max_depth = min(((round >> 2) + 1) << 1, MAX_DEPTH);
     for(int i = 0 ; i < SIZE ; i++)
         for(int j = 0; j < SIZE; j++)
             if(GET(global_state, i, j) == BLACK) black_tot++;
@@ -382,6 +410,11 @@ void AIPlace(struct State* state, int color)
             }
     depth = 0;
     dfs(-INF, INF);
+    if(best_choice.x == -1)
+    {
+        printf("Draw!");
+        getchar();
+    }
     PLACE(state, best_choice.x, best_choice.y, currentColor);
     lastPosX = best_choice.x;
     lastPosY = best_choice.y;

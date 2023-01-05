@@ -10,4 +10,5 @@ int main()
     TUI(titleScreenManager);
     clean();
     clear_output();
+//    gameLoop(AI, AI);
 }

@@ -123,7 +123,11 @@ int checkLiveThree(int x, int y)
         {
             cnt++;
             if(cnt == 2) return 2;
-            else find = false;
+            else
+            {
+                find = false;
+                continue;
+            }
         }
         for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
         {
@@ -198,7 +202,11 @@ int checkFour(int x, int y)
         {
             cnt++;
             if(cnt == 2) return 2;
-            else find = false;
+            else
+            {
+                find = false;
+                continue;
+            }
         }
         for(int i = max(-4, -idx); i <= min(0, SIZE - 5 - idx); i++)
         {
@@ -493,7 +501,7 @@ int countBlackLiveThree(struct Cross cross, int x, int y)
         if(find)
         {
             cnt++;
-            break;
+            continue;
         }
         for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
         {
@@ -615,7 +623,7 @@ int countWhiteLiveThree(struct Cross cross)
         if(find)
         {
             cnt++;
-            break;
+            continue;
         }
         for(int i = max(-4, -idx); i <= min(-1, SIZE - 6 - idx); i++)
         {
@@ -654,7 +662,7 @@ int countWhiteFour(struct Cross cross)
         if(find)
         {
             cnt++;
-            break;
+            continue;
         }
         for(int i = max(-3, -idx); i <= min(0, SIZE - 5 - idx); i++)
         {

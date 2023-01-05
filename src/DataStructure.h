@@ -40,7 +40,7 @@ struct HeapNode
  */
 struct BinaryHeap
 {
-    struct HeapNode hp[MAX_HEAPSIZE + 1];
+    struct HeapNode hp[MAX_HEAPSIZE + 5];
     int sz;
 };
 static inline void clear(struct BinaryHeap *H) { H->sz = 0; }

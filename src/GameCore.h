@@ -23,11 +23,11 @@
 #define DIAG_R 3
 //assign points for different targets
 //how to calc the point for one move: if one move achieves certain following targets then add the corresponding points
-#define FORM_RENJU (1 << 16)
-#define DESTROY_FOUR (1 << 7)
-#define FORM_FOUR (1 << 5)
-#define DESTROY_LIVE_THREE (1 << 4)
-#define FORM_LIVE_THREE (1 << 2)
+#define FORM_RENJU 0x3f3f3f3f
+#define DESTROY_FOUR (1 << 9)
+#define FORM_FOUR (1 << 7)
+#define DESTROY_LIVE_THREE (1 << 5)
+#define FORM_LIVE_THREE (1 << 3)
 #define FORM_TWO 1
 /**
  * Use four/six int arrays to store current state of the state.

@@ -12,7 +12,7 @@
 #define INVALID_INPUT_OVERLAP 4
 #define MAX_LOG 256
 int lastPosX, lastPosY;
-static struct Vec2i log[MAX_LOG];
+static struct Vec2i log[MAX_LOG << 1];
 static int log_ptr;
 
 /**
@@ -22,7 +22,8 @@ void drawBoard(const struct State *state)
 {
     for (int i = SIZE - 1; i >= 0; i--)
     {
-        printf("%2d", i + 1);
+        if(i < 9)printf(" %d", i + 1);
+        else printf("%d", i + 1);
         for (int j = 0; j < SIZE; j++)
         {
             int status = GET(state, i, j);
@@ -211,7 +212,7 @@ void gameLoop(const int blackPlayer, const int whitePlayer)
     {
         clear_output();
         drawBoard(state);
-        if ((ending = checkWinner(state, currentColor, lastPosX, lastPosY)) != ENDING_NOT_END) break;
+        if ((ending = checkWinner(state, currentColor^1, lastPosX, lastPosY)) != ENDING_NOT_END) break;
         if((currentColor == BLACK && blackPlayer == AI) || (currentColor == WHITE && whitePlayer == AI))
             AIPlace(state, currentColor);
         else
